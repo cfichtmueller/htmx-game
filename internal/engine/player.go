@@ -1,4 +1,4 @@
-package state
+package engine
 
 type Player struct {
 	ID    string

@@ -5,7 +5,7 @@ import (
 	"math"
 	"strconv"
 
-	"cfichtmueller.com/htmx-game/internal/state"
+	"cfichtmueller.com/htmx-game/internal/engine"
 )
 
 type State struct {
@@ -30,7 +30,7 @@ func NewState(w, h string) (*State, error) {
 	}, nil
 }
 
-func (v *State) Update(s *state.State) {
+func (v *State) Update(s *engine.State) {
 	xFactor := v.width / s.Width
 	yFactor := v.height / s.Height
 	factor := math.Min(xFactor, yFactor)
@@ -63,7 +63,7 @@ type Cell struct {
 	Color    string
 }
 
-func cellFromAgent(factor float64, color string, a *state.Agent) Cell {
+func cellFromAgent(factor float64, color string, a *engine.Agent) Cell {
 	w := math.Max(10, factor*a.Width)
 	h := math.Max(10, factor*a.Height)
 	return Cell{

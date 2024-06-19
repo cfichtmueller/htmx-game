@@ -8,7 +8,7 @@ import (
 	"io"
 
 	"cfichtmueller.com/htmx-game/internal/client"
-	"cfichtmueller.com/htmx-game/internal/state"
+	"cfichtmueller.com/htmx-game/internal/engine"
 )
 
 var (
@@ -41,11 +41,11 @@ func RenderShellEnd(w io.Writer) error {
 }
 
 type indexPageModel struct {
-	State  *state.State
-	Player *state.Player
+	State  *engine.State
+	Player *engine.Player
 }
 
-func RenderIndexPage(w io.Writer, s *state.State, p *state.Player) error {
+func RenderIndexPage(w io.Writer, s *engine.State, p *engine.Player) error {
 	return renderTemplate(w, "IndexPage", indexPageModel{
 		State:  s,
 		Player: p,
@@ -57,10 +57,10 @@ func RenderField(w io.Writer, s *client.State) error {
 }
 
 type osdModel struct {
-	Player *state.Player
+	Player *engine.Player
 }
 
-func RenderOsd(w io.Writer, p *state.Player) error {
+func RenderOsd(w io.Writer, p *engine.Player) error {
 	return renderTemplate(w, "Osd", osdModel{Player: p})
 }
 

@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"cfichtmueller.com/htmx-game/internal/client"
-	"cfichtmueller.com/htmx-game/internal/state"
+	"cfichtmueller.com/htmx-game/internal/engine"
 	"cfichtmueller.com/htmx-game/internal/ui"
 )
 
 func main() {
 
-	s := state.New(1000, 600)
+	s := engine.New(1000, 600)
 
 	loopTicker := time.NewTicker(30 * time.Millisecond)
 	spawnTicker := time.NewTicker(100 * time.Millisecond)
@@ -39,12 +39,12 @@ func main() {
 			}
 			x := rand.Float64() * 10
 			if x > 7 {
-				s.AddCell(state.NewVelocityPowerUpCell(
+				s.AddCell(engine.NewVelocityPowerUpCell(
 					s.Width*rand.Float64(),
 					s.Height*rand.Float64(),
 				))
 			} else {
-				s.AddCell(state.NewBulletCell())
+				s.AddCell(engine.NewBulletCell())
 			}
 		}
 	}()
