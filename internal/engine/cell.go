@@ -4,15 +4,11 @@ import (
 	"math/rand"
 )
 
-const (
-	CELL_TYPE_BULLET         = "bullet"
-	CELL_TYPE_POWER_VELOCITY = "powerUpVelocity"
-)
-
 type Cell struct {
-	Agent *Agent
-	Color string
-	Type  string
+	Agent                 *Agent
+	Color                 string
+	Type                  string
+	HandlePlayerCollision func(c *Cell, p *Player)
 }
 
 func NewBulletCell() *Cell {
@@ -28,7 +24,10 @@ func NewBulletCell() *Cell {
 			TTL:       15,
 		},
 		Color: "#fdc82a",
-		Type:  CELL_TYPE_BULLET,
+		HandlePlayerCollision: func(c *Cell, p *Player) {
+			p.Die()
+			c.Die()
+		},
 	}
 }
 
@@ -36,7 +35,10 @@ func NewVelocityPowerUpCell(x, y float64) *Cell {
 	return &Cell{
 		Agent: StaticAgent(x, y, 10, 10).SetAges(true).SetTTL(30),
 		Color: "#006600",
-		Type:  CELL_TYPE_POWER_VELOCITY,
+		HandlePlayerCollision: func(c *Cell, p *Player) {
+			c.Die()
+			p.Agent.MaxVelocity += 5
+		},
 	}
 }
 

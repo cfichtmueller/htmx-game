@@ -32,17 +32,10 @@ func (s *State) Update(dt float64) {
 	for _, p := range s.Players {
 		p.Update(dt)
 		c, ok := intersects(p, s.Cells)
-		if !ok {
+		if !ok || c.HandlePlayerCollision == nil {
 			continue
 		}
-		switch c.Type {
-		case CELL_TYPE_BULLET:
-			p.Die()
-			c.Die()
-		case CELL_TYPE_POWER_VELOCITY:
-			c.Die()
-			p.Agent.MaxVelocity += 5
-		}
+		c.HandlePlayerCollision(c, p)
 	}
 	s.mu.Unlock()
 }
