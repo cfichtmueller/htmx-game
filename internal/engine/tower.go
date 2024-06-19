@@ -20,6 +20,7 @@ func NewTowerCell(x, y float64) *Cell {
 			Width:  15,
 			Height: 15,
 		},
+		Type:  "tower",
 		Color: "#000000",
 		Data: &TowerCellData{
 			timeToNextBurst: 5 * rand.Float64(),
@@ -35,6 +36,7 @@ func NewTowerCell(x, y float64) *Cell {
 				d.timeToNextBurst = 5 + 10*rand.Float64()
 				d.bulletsLeftInBurst = 3 + int(rand.Float64()*3)
 				d.burstDirection = math.Pi * 2 * rand.Float64()
+				c.Agent.Direction = d.burstDirection
 				return CellUpdateResult{}
 			}
 			d.bulletsLeftInBurst -= 1

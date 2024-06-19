@@ -42,7 +42,7 @@ func (v *State) Update(s *engine.State) {
 			factor,
 			c.Color,
 			c.Agent,
-			"",
+			c.Type,
 		))
 	}
 
