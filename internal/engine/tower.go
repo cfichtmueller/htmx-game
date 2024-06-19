@@ -17,8 +17,8 @@ func NewTowerCell(x, y float64) *Cell {
 		Agent: &Agent{
 			X:      x,
 			Y:      y,
-			Width:  15,
-			Height: 15,
+			Width:  30,
+			Height: 30,
 		},
 		Type:  "tower",
 		Color: "#000000",
