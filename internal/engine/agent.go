@@ -3,20 +3,23 @@ package engine
 import "math"
 
 type Agent struct {
-	X                  float64
-	Y                  float64
-	Width              float64
-	Height             float64
-	Acceleration       float64
-	Velocity           float64
-	Friction           float64
-	MaxVelocity        float64
-	AngularVelocity    float64
-	MaxAngularVelocity float64
-	Direction          float64
-	TTL                float64
-	Ages               bool
-	Dead               bool
+	X                   float64
+	Y                   float64
+	Width               float64
+	Height              float64
+	Acceleration        float64
+	Velocity            float64
+	Friction            float64
+	MaxVelocity         float64
+	AngularVelocity     float64
+	MaxAngularVelocity  float64
+	TargetDirection     float64
+	IsAutoRotating      bool
+	autoRotateDirection float64
+	Direction           float64
+	TTL                 float64
+	Ages                bool
+	Dead                bool
 }
 
 func StaticAgent(x, y, width, height float64) *Agent {
@@ -28,6 +31,18 @@ func StaticAgent(x, y, width, height float64) *Agent {
 }
 
 func (a *Agent) Update(dt float64) {
+	if a.Ages {
+		a.TTL = math.Max(0, a.TTL-dt)
+	}
+	if a.Ages && a.TTL == 0 {
+		a.Dead = true
+		return
+	}
+	if a.IsAutoRotating && (a.autoRotateDirection > 0 && a.Direction > a.TargetDirection || a.autoRotateDirection < 0 && a.Direction < a.TargetDirection) {
+		a.Direction = a.TargetDirection
+		a.AngularVelocity = 0
+		a.IsAutoRotating = false
+	}
 	a.Direction += a.AngularVelocity * dt
 	a.Velocity += a.Acceleration * dt
 	if a.Velocity > 0 {
@@ -37,12 +52,6 @@ func (a *Agent) Update(dt float64) {
 	}
 	a.X = a.X + dt*a.Velocity*math.Cos(a.Direction)
 	a.Y = a.Y + dt*a.Velocity*math.Sin(a.Direction)
-	if a.Ages {
-		a.TTL = math.Max(0, a.TTL-dt)
-	}
-	if a.Ages && a.TTL == 0 {
-		a.Dead = true
-	}
 }
 
 func (a *Agent) SetAcceleration(acc float64) {
@@ -99,5 +108,16 @@ func (a *Agent) SetAges(ages bool) *Agent {
 
 func (a *Agent) SetTTL(ttl float64) *Agent {
 	a.TTL = ttl
+	return a
+}
+
+func (a *Agent) SetTargetDirection(direction float64) *Agent {
+	a.IsAutoRotating = true
+	a.TargetDirection = direction
+	a.autoRotateDirection = 1
+	if direction < a.Direction {
+		a.autoRotateDirection = -1
+	}
+	a.AngularVelocity = a.MaxAngularVelocity * a.autoRotateDirection
 	return a
 }

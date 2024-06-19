@@ -15,10 +15,11 @@ type TowerCellData struct {
 func NewTowerCell(x, y float64) *Cell {
 	return &Cell{
 		Agent: &Agent{
-			X:      x,
-			Y:      y,
-			Width:  30,
-			Height: 30,
+			X:                  x,
+			Y:                  y,
+			Width:              30,
+			Height:             30,
+			MaxAngularVelocity: math.Pi,
 		},
 		Type:  "tower",
 		Color: "#000000",
@@ -36,7 +37,7 @@ func NewTowerCell(x, y float64) *Cell {
 				d.timeToNextBurst = 5 + 10*rand.Float64()
 				d.bulletsLeftInBurst = 3 + int(rand.Float64()*3)
 				d.burstDirection = math.Pi * 2 * rand.Float64()
-				c.Agent.Direction = d.burstDirection
+				c.Agent.SetTargetDirection(d.burstDirection)
 				return CellUpdateResult{}
 			}
 			d.bulletsLeftInBurst -= 1
@@ -44,8 +45,8 @@ func NewTowerCell(x, y float64) *Cell {
 			return CellUpdateResult{
 				Cells: generateBullets(
 					1,
-					c.Agent.X,
-					c.Agent.Y,
+					c.Agent.X+c.Agent.Width/2,
+					c.Agent.Y+c.Agent.Height/2,
 					d.burstDirection,
 					0.02*rand.Float64(),
 					70,
