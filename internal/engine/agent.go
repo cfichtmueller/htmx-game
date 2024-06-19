@@ -40,7 +40,7 @@ func (a *Agent) Update(dt float64) {
 	if a.Ages {
 		a.TTL = math.Max(0, a.TTL-dt)
 	}
-	if a.TTL == 0 {
+	if a.Ages && a.TTL == 0 {
 		a.Dead = true
 	}
 }

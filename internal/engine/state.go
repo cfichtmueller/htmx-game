@@ -23,7 +23,8 @@ func (s *State) Update(dt float64) {
 	s.mu.Lock()
 	newCells := make([]*Cell, 0, len(s.Cells))
 	for _, c := range s.Cells {
-		c.Update(dt)
+		r := c.Update(dt)
+		newCells = append(newCells, r.Cells...)
 		if !c.Agent.Dead {
 			newCells = append(newCells, c)
 		}

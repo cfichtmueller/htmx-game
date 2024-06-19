@@ -20,6 +20,12 @@ func New(width, height float64) *Engine {
 }
 
 func (e *Engine) Start() {
+	for i := 0; i < 10; i++ {
+		e.State.AddCell(NewTowerCell(
+			e.State.Width*rand.Float64(),
+			e.State.Height*rand.Float64(),
+		))
+	}
 	go func(t *time.Ticker, s *State) {
 		last := time.Now().UnixMilli()
 		for {
@@ -44,7 +50,7 @@ func (e *Engine) Start() {
 					s.Height*rand.Float64(),
 				))
 			} else {
-				s.AddCell(NewBulletCell())
+				s.AddCell(NewBulletCell(0, 0, rand.Float64(), 10+100*rand.Float64(), 15))
 			}
 		}
 	}(e.spawnTicker, e.State)
