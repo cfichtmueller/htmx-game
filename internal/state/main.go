@@ -39,9 +39,10 @@ func (s *State) Update(dt float64) {
 	}
 	s.Cells = newCells
 	for _, p := range s.Players {
+		p.Update(dt)
 		c, ok := intersects(p, s.Cells)
 		if !ok {
-			return
+			continue
 		}
 		switch c.Type {
 		case CELL_TYPE_BULLET:
@@ -49,7 +50,7 @@ func (s *State) Update(dt float64) {
 			c.Die()
 		case CELL_TYPE_POWER_VELOCITY:
 			c.Die()
-			p.Velocity = p.Velocity + 2
+			p.MaxVelocity = p.MaxVelocity + 2
 		}
 	}
 }
@@ -76,11 +77,11 @@ func (s *State) MoveCell(c *Cell, x, y float64) {
 func (s *State) SpawnPlayer() *Player {
 	s.mu.Lock()
 	p := &Player{
-		ID:       randomId(),
-		X:        s.Width / 2,
-		Y:        s.Height / 2,
-		Velocity: 5,
-		Color:    "#ff00ff",
+		ID:          randomId(),
+		X:           s.Width / 2,
+		Y:           s.Height / 2,
+		MaxVelocity: 50,
+		Color:       "#ff00ff",
 	}
 	s.Players[p.ID] = p
 	s.mu.Unlock()
@@ -88,8 +89,6 @@ func (s *State) SpawnPlayer() *Player {
 }
 
 func (s *State) PlayerWithId(id string) *Player {
-	s.mu.Lock()
-	defer s.mu.Unlock()
 	p, ok := s.Players[id]
 	if !ok {
 		return nil

@@ -103,7 +103,7 @@ func main() {
 		case "respawn":
 			p.Die()
 		case "move":
-			s.MovePlayer(p, float64(input.Dx), float64(input.Dy))
+			p.AcceptMoveInput(float64(input.Dx), float64(input.Dy))
 		}
 	})
 
