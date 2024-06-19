@@ -20,7 +20,7 @@ type State struct {
 	Players map[string]*Player
 }
 
-func New(width, height float64) *State {
+func NewState(width, height float64) *State {
 	return &State{
 		Width:   width,
 		Height:  height,

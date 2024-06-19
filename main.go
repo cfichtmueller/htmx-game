@@ -4,9 +4,7 @@ import (
 	"encoding/json"
 	"io"
 	"log"
-	"math/rand"
 	"net/http"
-	"time"
 
 	"cfichtmueller.com/htmx-game/internal/client"
 	"cfichtmueller.com/htmx-game/internal/engine"
@@ -15,39 +13,9 @@ import (
 
 func main() {
 
-	s := engine.New(1000, 600)
+	game := engine.New(1000, 600)
 
-	loopTicker := time.NewTicker(30 * time.Millisecond)
-	spawnTicker := time.NewTicker(100 * time.Millisecond)
-
-	go func() {
-		last := time.Now().UnixMilli()
-		for {
-			<-loopTicker.C
-			now := time.Now().UnixMilli()
-			delta := float64(now-last) / 1000
-			last = now
-			s.Update(delta)
-		}
-	}()
-
-	go func() {
-		for {
-			<-spawnTicker.C
-			if len(s.Cells) > 100 {
-				continue
-			}
-			x := rand.Float64() * 10
-			if x > 7 {
-				s.AddCell(engine.NewVelocityPowerUpCell(
-					s.Width*rand.Float64(),
-					s.Height*rand.Float64(),
-				))
-			} else {
-				s.AddCell(engine.NewBulletCell())
-			}
-		}
-	}()
+	game.Start()
 
 	http.HandleFunc("/js/{name}", func(w http.ResponseWriter, r *http.Request) {
 		name := r.PathValue("name")
@@ -62,7 +30,7 @@ func main() {
 
 	http.HandleFunc("/player/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
-		p := s.PlayerWithId(id)
+		p := game.State.PlayerWithId(id)
 		if p == nil {
 			w.WriteHeader(404)
 			return
@@ -75,7 +43,7 @@ func main() {
 				return
 			}
 
-			if !must("render index", ui.RenderIndexPage(w, s, p)) {
+			if !must("render index", ui.RenderIndexPage(w, game.State, p)) {
 				return
 			}
 			if includeShell && !must("render shell end", ui.RenderShellEnd(w)) {
@@ -118,7 +86,7 @@ func main() {
 			return
 		}
 		id := r.PathValue("id")
-		p := s.PlayerWithId(id)
+		p := game.State.PlayerWithId(id)
 		if p == nil {
 			w.WriteHeader(404)
 			return
@@ -136,7 +104,7 @@ func main() {
 			w.WriteHeader(204)
 			return
 		}
-		p := s.SpawnPlayer()
+		p := game.State.SpawnPlayer()
 		w.Header().Set("Location", "/player/"+p.ID)
 		w.Header().Set("Cache-Control", "no-store")
 		w.WriteHeader(302)
@@ -153,7 +121,7 @@ func main() {
 			return
 		}
 
-		cstate.Update(s)
+		cstate.Update(game.State)
 
 		if !must("render field", ui.RenderField(w, cstate)) {
 			return
