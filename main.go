@@ -99,12 +99,31 @@ func main() {
 		var input PlayerInput
 		json.Unmarshal(b, &input)
 
-		switch input.Action {
-		case "respawn":
-			p.Die()
-		case "move":
-			p.AcceptMoveInput(float64(input.Dx), float64(input.Dy))
+		for _, cmd := range input.Commands {
+			switch cmd.M {
+			case "setVelocity":
+				p.Agent.SetVelocity(p.Agent.MaxVelocity * cmd.V)
+			case "setRotation":
+				p.Agent.Direction = cmd.V
+			case "respawn":
+				p.Die()
+				return
+			}
 		}
+	})
+
+	http.HandleFunc("/player/{id}/osd", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			w.WriteHeader(405)
+			return
+		}
+		id := r.PathValue("id")
+		p := s.PlayerWithId(id)
+		if p == nil {
+			w.WriteHeader(404)
+			return
+		}
+		must("render osd", ui.RenderOsd(w, p))
 	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -153,7 +172,10 @@ func must(what string, err error) bool {
 }
 
 type PlayerInput struct {
-	Action string `json:"action"`
-	Dx     int    `json:"dx"`
-	Dy     int    `json:"dy"`
+	Commands []PlayerCommand `json:"commands"`
+}
+
+type PlayerCommand struct {
+	M string  `json:"m"`
+	V float64 `json:"v"`
 }

@@ -30,10 +30,11 @@ func New(width, height float64) *State {
 }
 
 func (s *State) Update(dt float64) {
+	s.mu.Lock()
 	newCells := make([]*Cell, 0, len(s.Cells))
 	for _, c := range s.Cells {
 		c.Update(dt)
-		if c.Age < 15 && !c.Dead {
+		if !c.Agent.Dead {
 			newCells = append(newCells, c)
 		}
 	}
@@ -50,9 +51,10 @@ func (s *State) Update(dt float64) {
 			c.Die()
 		case CELL_TYPE_POWER_VELOCITY:
 			c.Die()
-			p.MaxVelocity = p.MaxVelocity + 2
+			p.Agent.MaxVelocity += 5
 		}
 	}
+	s.mu.Unlock()
 }
 
 func (s *State) AddCell(c *Cell) {
@@ -61,27 +63,20 @@ func (s *State) AddCell(c *Cell) {
 	s.mu.Unlock()
 }
 
-func (s *State) MoveCell(c *Cell, x, y float64) {
-	nx := c.X + x
-	ny := c.Y + y
-	if nx > s.Width {
-		nx = nx - s.Width
-	}
-	if ny > s.Height {
-		ny = ny - s.Height
-	}
-	c.X = nx
-	c.Y = ny
-}
-
 func (s *State) SpawnPlayer() *Player {
 	s.mu.Lock()
 	p := &Player{
-		ID:          randomId(),
-		X:           s.Width / 2,
-		Y:           s.Height / 2,
-		MaxVelocity: 50,
-		Color:       "#ff00ff",
+		ID: randomId(),
+		Agent: &Agent{
+			X:                  s.Width / 2,
+			Y:                  s.Height / 2,
+			Width:              30,
+			Height:             30,
+			MaxVelocity:        50,
+			MaxAngularVelocity: 10,
+			Friction:           10,
+		},
+		Color: "#ff00ff",
 	}
 	s.Players[p.ID] = p
 	s.mu.Unlock()
@@ -96,29 +91,9 @@ func (s *State) PlayerWithId(id string) *Player {
 	return p
 }
 
-func (s *State) MovePlayer(p *Player, x, y float64) {
-	if p.Dead {
-		return
-	}
-	nx := p.X + x*p.Velocity
-	ny := p.Y + y*p.Velocity
-	if nx > s.Width {
-		nx = s.Width
-	}
-	if ny > s.Height {
-		ny = s.Height
-	}
-	p.X = nx
-	p.Y = ny
-}
-
 func intersects(p *Player, cells []*Cell) (*Cell, bool) {
-	minX := p.X - 20
-	maxX := p.X + 20
-	minY := p.Y - 20
-	maxY := p.Y + 20
 	for _, c := range cells {
-		if c.X > minX && c.X < maxX && c.Y > minY && c.Y < maxY {
+		if p.Agent.Intersects(c.Agent) {
 			return c, true
 		}
 	}

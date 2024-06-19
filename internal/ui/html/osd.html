@@ -1,0 +1,9 @@
+{{define "Osd"}}
+    {{ with .Player }}
+    <div class="osd">
+        <div>Velocity: {{.Agent.Velocity}}</div>
+        <div>Angular Velocity: {{.Agent.AngularVelocity}}</div>
+        <div>Direction: {{.Agent.Direction}}</div>
+    </div>
+    {{ end}}
+{{end}}

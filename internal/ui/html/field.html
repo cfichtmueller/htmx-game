@@ -1,5 +1,7 @@
 {{define "Field"}}
     {{range .Cells}}
-    <div class="cell" style="left: {{.Left}}px; top: {{.Top}}px; width: {{.Width}}px; height: {{.Height}}px; background: {{ .Color }};"></div>
+    <div
+        class="cell"
+        style="left: {{.Left}}px; top: {{.Top}}px; width: {{.Width}}px; height: {{.Height}}px; background: {{ .Color }}; tansform: rotate({{.Rotation}}rad);"></div>
     {{end}}
 {{end}}

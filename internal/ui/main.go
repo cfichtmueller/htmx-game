@@ -56,6 +56,14 @@ func RenderField(w io.Writer, s *client.State) error {
 	return renderTemplate(w, "Field", s)
 }
 
+type osdModel struct {
+	Player *state.Player
+}
+
+func RenderOsd(w io.Writer, p *state.Player) error {
+	return renderTemplate(w, "Osd", osdModel{Player: p})
+}
+
 func renderTemplate(w io.Writer, name string, data any) error {
 	if err := templates.ExecuteTemplate(w, name, data); err != nil {
 		return fmt.Errorf("unable to render template %s: %v", name, err)

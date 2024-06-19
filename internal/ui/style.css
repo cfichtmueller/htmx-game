@@ -27,3 +27,13 @@
 .help div {
     margin-bottom: 1rem;
 }
+
+.osd {
+    position: fixed;
+    left: 2rem;
+    bottom: 2rem;
+    
+    border-radius: 5px;
+    border: 1px solid #000;
+    background: #ffffff;
+}
