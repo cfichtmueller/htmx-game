@@ -42,6 +42,7 @@ func (v *State) Update(s *engine.State) {
 			factor,
 			c.Color,
 			c.Agent,
+			"",
 		))
 	}
 
@@ -50,6 +51,7 @@ func (v *State) Update(s *engine.State) {
 			factor,
 			p.Color,
 			p.Agent,
+			"player",
 		))
 	}
 }
@@ -61,9 +63,10 @@ type Cell struct {
 	Top      int
 	Rotation float64
 	Color    string
+	Type     string
 }
 
-func cellFromAgent(factor float64, color string, a *engine.Agent) Cell {
+func cellFromAgent(factor float64, color string, a *engine.Agent, t string) Cell {
 	w := math.Max(10, factor*a.Width)
 	h := math.Max(10, factor*a.Height)
 	return Cell{
@@ -71,7 +74,8 @@ func cellFromAgent(factor float64, color string, a *engine.Agent) Cell {
 		Height:   int(h),
 		Left:     int(a.X * factor),
 		Top:      int(a.Y * factor),
-		Rotation: a.Direction,
+		Rotation: a.Direction + math.Pi/2,
 		Color:    color,
+		Type:     t,
 	}
 }
