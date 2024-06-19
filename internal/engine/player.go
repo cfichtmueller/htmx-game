@@ -16,6 +16,6 @@ func (p *Player) Update(dt float64) {
 
 func (p *Player) Die() {
 	p.Dead = true
-	p.Color = "#ff0000"
+	p.Color = "#2c3e50"
 	p.Agent.Stop()
 }

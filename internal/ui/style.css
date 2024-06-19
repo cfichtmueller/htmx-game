@@ -1,14 +1,25 @@
-.body {
+:root {
+    box-sizing: border-box;
+}
+
+html {
+    margin: 0;
+    padding: 0;
+}
+
+body {
     width: 100vw;
     min-height: 100vh;
     
     font-family: sans-serif;
+    margin: 0;
+    padding: 0;
 }
 
-.field {
+#field {
     width: 100vw;
     min-height: 100vh;
-    background: #fdc82a;
+    background: #ecf0f1;
 }
 
 .cell {
@@ -19,13 +30,16 @@
     position: fixed;
     right: 2rem;
     bottom: 2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    border-width: 1px;
+    border-color: rgba(0,0,0,0);
+    padding: .75rem;
     
-    border-radius: 5px;
     background: #ffffff;
-}
-
-.help div {
-    margin-bottom: 1rem;
+    color: rgb(9, 9, 11);
 }
 
 .osd {

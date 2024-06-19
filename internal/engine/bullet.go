@@ -12,7 +12,7 @@ func NewBulletCell(x, y, direction, velocity, ttl float64) *Cell {
 			Ages:      true,
 			TTL:       ttl,
 		},
-		Color: "#fdc82a",
+		Color: "#e74c3c",
 		Type:  "bullet",
 		HandlePlayerCollision: func(c *Cell, p *Player) {
 			p.Die()

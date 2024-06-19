@@ -60,7 +60,7 @@ func (s *State) SpawnPlayer() *Player {
 			MaxAngularVelocity: 10,
 			Friction:           10,
 		},
-		Color: "#ff00ff",
+		Color: "#3498db",
 	}
 	s.Players[p.ID] = p
 	s.mu.Unlock()

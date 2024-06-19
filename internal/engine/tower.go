@@ -22,7 +22,7 @@ func NewTowerCell(x, y float64) *Cell {
 			MaxAngularVelocity: math.Pi,
 		},
 		Type:  "tower",
-		Color: "#000000",
+		Color: "#e67e22",
 		Data: &TowerCellData{
 			timeToNextBurst: 5 * rand.Float64(),
 		},

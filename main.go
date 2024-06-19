@@ -67,6 +67,10 @@ func main() {
 		var input PlayerInput
 		json.Unmarshal(b, &input)
 
+		if p.Dead {
+			return
+		}
+
 		for _, cmd := range input.Commands {
 			switch cmd.M {
 			case "setVelocity":
