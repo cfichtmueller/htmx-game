@@ -1,0 +1,29 @@
+.body {
+    width: 100vw;
+    min-height: 100vh;
+    
+    font-family: sans-serif;
+}
+
+.field {
+    width: 100vw;
+    min-height: 100vh;
+    background: #fdc82a;
+}
+
+.cell {
+    position: fixed;
+}
+
+.help {
+    position: fixed;
+    right: 2rem;
+    bottom: 2rem;
+    
+    border-radius: 5px;
+    background: #ffffff;
+}
+
+.help div {
+    margin-bottom: 1rem;
+}

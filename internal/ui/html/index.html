@@ -1,0 +1,13 @@
+{{define "IndexPage"}}
+<form hx-get="/field" hx-trigger="every 30ms" hx-target="#field">
+    <input type="hidden" id="vw" name="w" value="0" />
+    <input type="hidden" id="vh" name="h" value="0" />
+    <input type="hidden" name="playerId" value="{{.Player.ID}}" />
+    <div id="field">
+    </div>
+    <div class="help">
+        <div>Press W S A D to move</div>
+        <div>Press P to respawn</div>
+    </div>
+</div>
+{{end}}
