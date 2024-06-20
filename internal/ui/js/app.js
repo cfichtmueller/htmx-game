@@ -1,11 +1,14 @@
 (function () {
+
   let vw = document.getElementById("vw");
   let vh = document.getElementById("vh");
 
-  vw.setAttribute("value", window.innerWidth);
-  vh.setAttribute("value", window.innerHeight);
-
   let pid = document.querySelector("[name=playerId]").value;
+
+  function onWindowResize() {
+    vw.setAttribute("value", window.innerWidth);
+    vh.setAttribute("value", window.innerHeight);  
+  }
 
   function notifyPlayer(...payload) {
     return fetch("/player/" + pid, {
@@ -18,6 +21,8 @@
 
   const setVelocity = (v) => ({ m: "setVelocity", v });
   const setRotation = (v) => ({ m: "setRotation", v });
+
+  window.addEventListener("resize", onWindowResize)
 
   document.addEventListener("keydown", function (e) {
     console.log("key down", e);
@@ -65,4 +70,6 @@
         return;
     }
   });
+
+  onWindowResize()
 })();

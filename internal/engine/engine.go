@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"math/rand"
 	"time"
 )
 
@@ -22,8 +21,8 @@ func New(width, height float64) *Engine {
 func (e *Engine) Start() {
 	for i := 0; i < 10; i++ {
 		e.State.AddCell(NewTowerCell(
-			e.State.Width*rand.Float64(),
-			e.State.Height*rand.Float64(),
+			frandom(0, e.State.Width),
+			frandom(0, e.State.Height),
 		))
 	}
 	go func(t *time.Ticker, s *State) {
@@ -43,14 +42,14 @@ func (e *Engine) Start() {
 			if len(s.Cells) > 100 {
 				continue
 			}
-			x := rand.Float64() * 10
+			x := frandom(0, 10)
 			if x > 7 {
 				s.AddCell(NewVelocityPowerUpCell(
-					s.Width*rand.Float64(),
-					s.Height*rand.Float64(),
+					frandom(0, s.Width),
+					frandom(0, s.Height),
 				))
 			} else {
-				s.AddCell(NewBulletCell(0, 0, rand.Float64(), 10+100*rand.Float64(), 15))
+				s.AddCell(NewBulletCell(0, 0, frandom(0, 1), frandom(10, 110), 15))
 			}
 		}
 	}(e.spawnTicker, e.State)

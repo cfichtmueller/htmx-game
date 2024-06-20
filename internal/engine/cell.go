@@ -28,3 +28,17 @@ func (c *Cell) Die() {
 	c.Agent.Dead = true
 	c.Agent.Stop()
 }
+
+type CellList struct {
+	Cells []*Cell
+}
+
+func NewCellList() *CellList {
+	return &CellList{
+		Cells: make([]*Cell, 0),
+	}
+}
+
+func (l *CellList) Add(cells ...*Cell) {
+	l.Cells = append(l.Cells, cells...)
+}

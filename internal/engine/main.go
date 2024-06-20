@@ -3,6 +3,7 @@ package engine
 import (
 	"crypto/rand"
 	"fmt"
+	mr "math/rand"
 	"strings"
 )
 
@@ -32,4 +33,24 @@ func randomId() string {
 		result.WriteString(idChars[index])
 	}
 	return result.String()
+}
+
+type IFunc func() int
+
+func irandom(lower, upper int) int {
+	return lower + int(float64(upper-lower)*mr.Float64())
+}
+
+func irandomF(lower, upper int) IFunc {
+	return func() int { return irandom(lower, upper) }
+}
+
+type FFunc func() float64
+
+func frandom(lower, upper float64) float64 {
+	return lower + (upper-lower)*mr.Float64()
+}
+
+func frandomF(lower, upper float64) FFunc {
+	return func() float64 { return frandom(lower, upper) }
 }

@@ -19,6 +19,11 @@ body {
 #field {
     width: 100vw;
     min-height: 100vh;
+    background: #000;
+}
+
+.map {
+    position: fixed;
     background: #ecf0f1;
 }
 

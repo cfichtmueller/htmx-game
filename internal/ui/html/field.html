@@ -1,4 +1,5 @@
 {{define "Field"}}
+  <div class="map" style="width: {{.Map.Width}}px; height: {{.Map.Height}}px; left: {{.Map.Left}}px; top: {{.Map.Top}}px;">
     {{range .Cells}}
     <div
         class="cell"
@@ -14,6 +15,7 @@
         {{end}}
     </div>
     {{end}}
+  </div>
 {{end}}
 
 {{define "PlayerShape"}}

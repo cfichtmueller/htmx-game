@@ -9,8 +9,8 @@ import (
 )
 
 type State struct {
-	width  float64
-	height float64
+	Screen *Screen
+	Map    Map
 	Cells  []Cell
 }
 
@@ -25,21 +25,22 @@ func NewState(w, h string) (*State, error) {
 	}
 
 	return &State{
-		width:  float64(width),
-		height: float64(height),
+		Screen: &Screen{
+			Width:  float64(width),
+			Height: float64(height),
+			Factor: 1,
+		},
 	}, nil
 }
 
 func (v *State) Update(s *engine.State) {
-	xFactor := v.width / s.Width
-	yFactor := v.height / s.Height
-	factor := math.Min(xFactor, yFactor)
+	v.Screen.ScaleTo(s.Width, s.Height)
 
 	v.Cells = make([]Cell, 0, len(s.Cells))
 
 	for _, c := range s.Cells {
 		v.Cells = append(v.Cells, cellFromAgent(
-			factor,
+			v.Screen,
 			c.Color,
 			c.Agent,
 			c.Type,
@@ -48,12 +49,61 @@ func (v *State) Update(s *engine.State) {
 
 	for _, p := range s.Players {
 		v.Cells = append(v.Cells, cellFromAgent(
-			factor,
+			v.Screen,
 			p.Color,
 			p.Agent,
 			"player",
 		))
 	}
+
+	v.Map = Map{
+		Width:  v.Screen.MapLength(s.Width, 1),
+		Height: v.Screen.MapLength(s.Height, 1),
+		Left:   v.Screen.MapX(0),
+		Top:    v.Screen.MapY(0),
+	}
+}
+
+type Screen struct {
+	Width   float64
+	Height  float64
+	Factor  float64
+	xOffset float64
+	yOffset float64
+}
+
+func (s *Screen) ScaleTo(width, height float64) {
+	oAspect := width / height
+	myAspect := s.Width / s.Height
+	xFactor := s.Width / width
+	yFactor := s.Height / height
+	s.Factor = math.Min(xFactor, yFactor)
+	if oAspect > myAspect {
+		s.xOffset = 0
+		s.yOffset = s.Height/2 - s.Factor*height/2
+	} else {
+		s.xOffset = s.Width/2 - s.Factor*width/2
+		s.yOffset = 0
+	}
+}
+
+func (s *Screen) MapLength(l float64, min float64) int {
+	return int(math.Max(min, s.Factor*l))
+}
+
+func (s *Screen) MapX(x float64) int {
+	return int(x*s.Factor + s.xOffset)
+}
+
+func (s *Screen) MapY(y float64) int {
+	return int(y*s.Factor + s.yOffset)
+}
+
+type Map struct {
+	Width  int
+	Height int
+	Left   int
+	Top    int
 }
 
 type Cell struct {
@@ -66,14 +116,12 @@ type Cell struct {
 	Type     string
 }
 
-func cellFromAgent(factor float64, color string, a *engine.Agent, t string) Cell {
-	w := math.Max(10, factor*a.Width)
-	h := math.Max(10, factor*a.Height)
+func cellFromAgent(s *Screen, color string, a *engine.Agent, t string) Cell {
 	return Cell{
-		Width:    int(w),
-		Height:   int(h),
-		Left:     int(a.X * factor),
-		Top:      int(a.Y * factor),
+		Width:    s.MapLength(a.Width, 10),
+		Height:   s.MapLength(a.Height, 10),
+		Left:     s.MapX(a.X),
+		Top:      s.MapY(a.Y),
 		Rotation: a.Direction + math.Pi/2,
 		Color:    color,
 		Type:     t,
