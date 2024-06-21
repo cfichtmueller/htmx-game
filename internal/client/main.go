@@ -47,14 +47,14 @@ func (v *State) Update(s *engine.State) {
 		))
 	})
 
-	for _, p := range s.Players {
+	s.Players.Each(func(p *engine.Player) {
 		v.Cells = append(v.Cells, cellFromAgent(
 			v.Screen,
 			p.Color,
 			p.Agent,
 			"player",
 		))
-	}
+	})
 
 	v.Map = Map{
 		Width:  v.Screen.MapLength(s.Width, 1),

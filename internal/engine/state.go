@@ -7,7 +7,7 @@ type State struct {
 	Width   float64
 	Height  float64
 	Cells   *CellList
-	Players map[string]*Player
+	Players *PlayerList
 }
 
 func NewState(width, height float64) *State {
@@ -15,7 +15,7 @@ func NewState(width, height float64) *State {
 		Width:   width,
 		Height:  height,
 		Cells:   NewCellList(),
-		Players: map[string]*Player{},
+		Players: NewPlayerList(),
 	}
 }
 
@@ -24,7 +24,16 @@ func (s *State) Update(dt float64) {
 	s.Cells.Each(func(c *Cell) { c.Update(dt) })
 	s.Cells.Filter(func(c *Cell) bool { return !c.Agent.Dead })
 
-	for _, p := range s.Players {
+	s.Players.Each(func(p *Player) {
+		p.Update(dt)
+		c, ok := intersects(p, s.Cells.Cells)
+		if !ok || c.HandlePlayerCollision == nil {
+			return
+		}
+		c.HandlePlayerCollision(c, p)
+	})
+	s.Players.Filter(func(p *Player) bool { return !p.Agent.Decayed })
+	/*for _, p := range s.Players {
 		p.Update(dt)
 		c, ok := intersects(p, s.Cells.Cells)
 		if !ok || c.HandlePlayerCollision == nil {
@@ -35,7 +44,7 @@ func (s *State) Update(dt float64) {
 			delete(s.Players, p.ID)
 		}
 
-	}
+	}*/
 	s.mu.Unlock()
 }
 
@@ -62,15 +71,17 @@ func (s *State) SpawnPlayer() *Player {
 		},
 		Color: "#3498db",
 	}
-	s.Players[p.ID] = p
+	s.Players.Add(p)
+	//s.Players[p.ID] = p
 	s.mu.Unlock()
 	return p
 }
 
 func (s *State) PlayerWithId(id string) *Player {
-	p, ok := s.Players[id]
+	return s.Players.FindWithId(id)
+	/*p, ok := s.Players[id]
 	if !ok {
 		return nil
 	}
-	return p
+	return p*/
 }
