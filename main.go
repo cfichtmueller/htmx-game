@@ -67,7 +67,7 @@ func main() {
 		var input PlayerInput
 		json.Unmarshal(b, &input)
 
-		if p.Dead {
+		if p.Agent.Dead {
 			return
 		}
 

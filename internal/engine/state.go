@@ -6,7 +6,7 @@ type State struct {
 	mu      sync.Mutex
 	Width   float64
 	Height  float64
-	Cells   []*Cell
+	Cells   *CellList
 	Players map[string]*Player
 }
 
@@ -14,36 +14,34 @@ func NewState(width, height float64) *State {
 	return &State{
 		Width:   width,
 		Height:  height,
-		Cells:   make([]*Cell, 0),
+		Cells:   NewCellList(),
 		Players: map[string]*Player{},
 	}
 }
 
 func (s *State) Update(dt float64) {
 	s.mu.Lock()
-	newCells := make([]*Cell, 0, len(s.Cells))
-	for _, c := range s.Cells {
-		r := c.Update(dt)
-		newCells = append(newCells, r.Cells...)
-		if !c.Agent.Dead {
-			newCells = append(newCells, c)
-		}
-	}
-	s.Cells = newCells
+	s.Cells.Each(func(c *Cell) { c.Update(dt) })
+	s.Cells.Filter(func(c *Cell) bool { return !c.Agent.Dead })
+
 	for _, p := range s.Players {
 		p.Update(dt)
-		c, ok := intersects(p, s.Cells)
+		c, ok := intersects(p, s.Cells.Cells)
 		if !ok || c.HandlePlayerCollision == nil {
 			continue
 		}
 		c.HandlePlayerCollision(c, p)
+		if p.Agent.Decayed {
+			delete(s.Players, p.ID)
+		}
+
 	}
 	s.mu.Unlock()
 }
 
 func (s *State) AddCell(c *Cell) {
 	s.mu.Lock()
-	s.Cells = append(s.Cells, c)
+	s.Cells.Add(c)
 	s.mu.Unlock()
 }
 
@@ -59,6 +57,8 @@ func (s *State) SpawnPlayer() *Player {
 			MaxVelocity:        50,
 			MaxAngularVelocity: 10,
 			Friction:           10,
+			Decays:             true,
+			DecayTTL:           10,
 		},
 		Color: "#3498db",
 	}

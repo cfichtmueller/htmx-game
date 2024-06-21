@@ -15,6 +15,9 @@ func NewBulletCell(x, y, direction, velocity, ttl float64) *Cell {
 		Color: "#e74c3c",
 		Type:  "bullet",
 		HandlePlayerCollision: func(c *Cell, p *Player) {
+			if p.Agent.Dead {
+				return
+			}
 			p.Die()
 			c.Die()
 		},

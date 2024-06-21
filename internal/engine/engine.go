@@ -39,7 +39,7 @@ func (e *Engine) Start() {
 	go func(t *time.Ticker, s *State) {
 		for {
 			<-t.C
-			if len(s.Cells) > 100 {
+			if s.Cells.Length() > 100 {
 				continue
 			}
 			x := frandom(0, 10)

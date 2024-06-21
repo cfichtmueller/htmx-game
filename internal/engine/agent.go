@@ -20,6 +20,9 @@ type Agent struct {
 	TTL                 float64
 	Ages                bool
 	Dead                bool
+	Decays              bool
+	DecayTTL            float64
+	Decayed             bool
 }
 
 func StaticAgent(x, y, width, height float64) *Agent {
@@ -36,8 +39,18 @@ func (a *Agent) Update(dt float64) {
 	}
 	if a.Ages && a.TTL == 0 {
 		a.Dead = true
+	}
+	if a.Dead && a.Decays {
+		a.DecayTTL = math.Max(0, a.DecayTTL-dt)
+	}
+	if a.Dead && a.Decays && a.DecayTTL == 0 {
+		a.Decayed = true
+	}
+
+	if a.Dead && (!a.Decays || a.Decayed) {
 		return
 	}
+
 	if a.IsAutoRotating && (a.autoRotateDirection > 0 && a.Direction > a.TargetDirection || a.autoRotateDirection < 0 && a.Direction < a.TargetDirection) {
 		a.Direction = a.TargetDirection
 		a.AngularVelocity = 0

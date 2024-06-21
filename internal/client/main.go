@@ -36,16 +36,16 @@ func NewState(w, h string) (*State, error) {
 func (v *State) Update(s *engine.State) {
 	v.Screen.ScaleTo(s.Width, s.Height)
 
-	v.Cells = make([]Cell, 0, len(s.Cells))
+	v.Cells = make([]Cell, 0, s.Cells.Length())
 
-	for _, c := range s.Cells {
+	s.Cells.Each(func(c *engine.Cell) {
 		v.Cells = append(v.Cells, cellFromAgent(
 			v.Screen,
 			c.Color,
 			c.Agent,
 			c.Type,
 		))
-	}
+	})
 
 	for _, p := range s.Players {
 		v.Cells = append(v.Cells, cellFromAgent(

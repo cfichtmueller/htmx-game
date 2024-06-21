@@ -39,6 +39,30 @@ func NewCellList() *CellList {
 	}
 }
 
+func NewCellListWithCells(cells ...*Cell) *CellList {
+	return &CellList{Cells: cells}
+}
+
 func (l *CellList) Add(cells ...*Cell) {
 	l.Cells = append(l.Cells, cells...)
+}
+
+func (l *CellList) Each(f func(c *Cell)) {
+	for _, c := range l.Cells {
+		f(c)
+	}
+}
+
+func (l *CellList) Filter(f func(c *Cell) bool) {
+	newCells := make([]*Cell, 0, len(l.Cells))
+	for _, c := range l.Cells {
+		if f(c) {
+			newCells = append(newCells, c)
+		}
+	}
+	l.Cells = newCells
+}
+
+func (l *CellList) Length() int {
+	return len(l.Cells)
 }
