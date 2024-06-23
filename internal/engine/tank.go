@@ -14,7 +14,7 @@ func SpawnTankShelter(world *World, x, y, direction float64) {
 		Tree: bhv.NewTree(
 			waitNode(
 				&WaitState{TimeToWaitFn: frandomF(2, 4)},
-				&bhv.Node{OnTick: func(n *bhv.Node, bb *bhv.Blackboard) bhv.Status {
+				&bhv.Node{OnTick: func(n *bhv.Node, dt float64) bhv.Status {
 					SpawnTank(
 						world,
 						x,
@@ -25,11 +25,6 @@ func SpawnTankShelter(world *World, x, y, direction float64) {
 				}},
 			),
 		),
-		BbFunc: func(dt float64) *bhv.Blackboard {
-			bb := bhv.NewBlackboard()
-			bb.Set("dt", dt)
-			return bb
-		},
 	}
 }
 
@@ -44,7 +39,7 @@ func SpawnTank(world *World, x, y, direction float64) {
 		Tree: bhv.NewTree(
 			bhv.SequenceNode(
 				&bhv.Node{
-					OnTick: func(n *bhv.Node, bb *bhv.Blackboard) bhv.Status {
+					OnTick: func(n *bhv.Node, dt float64) bhv.Status {
 						if world.Components.Healths[entity].Dead {
 							return bhv.StatusFailure
 						}
@@ -54,17 +49,12 @@ func SpawnTank(world *World, x, y, direction float64) {
 				waitNode(
 					&WaitState{TimeToWaitFn: frandomF(2, 4), InitialWait: 5},
 					&bhv.Node{
-						OnTick: func(n *bhv.Node, bb *bhv.Blackboard) bhv.Status {
+						OnTick: func(n *bhv.Node, dt float64) bhv.Status {
 							world.Components.Positions[entity].Direction += frandom(-math.Pi/2, math.Pi/2)
 							return bhv.StatusSuccess
 						}},
 				),
 			),
 		),
-		BbFunc: func(dt float64) *bhv.Blackboard {
-			bb := bhv.NewBlackboard()
-			bb.Set("dt", dt)
-			return bb
-		},
 	}
 }

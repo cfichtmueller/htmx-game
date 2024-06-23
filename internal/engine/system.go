@@ -22,13 +22,7 @@ func (s *BehaviorSystem) Update(entities []Entity, components *ComponentStorage,
 		if !hasBehavior {
 			continue
 		}
-		var bb *bhv.Blackboard
-		if behavior.BbFunc != nil {
-			bb = behavior.BbFunc(dt)
-		} else {
-			bb = bhv.NewBlackboard()
-		}
-		behavior.Tree.Tick(bb)
+		behavior.Tree.Tick(dt)
 	}
 }
 
@@ -187,7 +181,7 @@ func NewSpeedPowerUpSystem(world *World) *SpeedPowerUpSystem {
 			bhv.SequenceNode(
 				waitNode(&WaitState{TimeToWaitFn: frandomF(5, 7)},
 					&bhv.Node{
-						OnTick: func(n *bhv.Node, bb *bhv.Blackboard) bhv.Status {
+						OnTick: func(n *bhv.Node, dt float64) bhv.Status {
 							entity := world.AddEntity(SpeedPowerUp)
 							world.Components.Positions[entity] = &Position{
 								X:         frandom(70, world.width-70),
@@ -212,7 +206,5 @@ func NewSpeedPowerUpSystem(world *World) *SpeedPowerUpSystem {
 }
 
 func (s *SpeedPowerUpSystem) Update(entities []Entity, components *ComponentStorage, dt float64) {
-	bb := bhv.NewBlackboard()
-	bb.Set("dt", dt)
-	s.behavior.Tick(bb)
+	s.behavior.Tick(dt)
 }

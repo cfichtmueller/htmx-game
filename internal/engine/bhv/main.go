@@ -8,33 +8,6 @@ const (
 
 type Status string
 
-type Blackboard struct {
-	data map[string]interface{}
-}
-
-func NewBlackboard() *Blackboard {
-	return &Blackboard{
-		data: make(map[string]interface{}),
-	}
-}
-
-func (b *Blackboard) Set(key string, value interface{}) {
-	b.data[key] = value
-}
-
-func (b *Blackboard) Get(key string) (interface{}, bool) {
-	v, ok := b.data[key]
-	return v, ok
-}
-
-func (b *Blackboard) MustGet(key string) interface{} {
-	v, ok := b.data[key]
-	if !ok {
-		panic("didn't find key " + key + " on blackboard")
-	}
-	return v
-}
-
 type Tree struct {
 	Root *Node
 }
@@ -45,17 +18,17 @@ func NewTree(root *Node) *Tree {
 	}
 }
 
-func (t *Tree) Tick(bb *Blackboard) {
+func (t *Tree) Tick(dt float64) {
 	if t.Root == nil {
 		return
 	}
-	t.Root.Tick(bb)
+	t.Root.Tick(dt)
 }
 
 type Node struct {
 	Children []*Node
 	Data     any
-	OnTick   func(n *Node, bb *Blackboard) Status
+	OnTick   func(n *Node, dt float64) Status
 }
 
 func NewNode() *Node {
@@ -64,11 +37,11 @@ func NewNode() *Node {
 	}
 }
 
-func (n *Node) Tick(bb *Blackboard) Status {
+func (n *Node) Tick(dt float64) Status {
 	if n.OnTick == nil {
 		return StatusFailure
 	}
-	return n.OnTick(n, bb)
+	return n.OnTick(n, dt)
 }
 
 func (n *Node) AddChild(child *Node) *Node {
@@ -81,7 +54,7 @@ func (n *Node) AddChildren(children ...*Node) *Node {
 	return n
 }
 
-func ActionNode(f func(n *Node, bb *Blackboard) Status) *Node {
+func ActionNode(f func(n *Node, dt float64) Status) *Node {
 	return &Node{
 		OnTick: f,
 	}
@@ -99,9 +72,9 @@ func SequenceNode(children ...*Node) *Node {
 	return n
 }
 
-func selectorFunc(n *Node, bb *Blackboard) Status {
+func selectorFunc(n *Node, dt float64) Status {
 	for _, c := range n.Children {
-		switch c.Tick(bb) {
+		switch c.Tick(dt) {
 		case StatusRunning:
 			return StatusRunning
 		case StatusSuccess:
@@ -111,9 +84,9 @@ func selectorFunc(n *Node, bb *Blackboard) Status {
 	return StatusFailure
 }
 
-func sequenceFunc(n *Node, bb *Blackboard) Status {
+func sequenceFunc(n *Node, dt float64) Status {
 	for _, c := range n.Children {
-		switch c.Tick(bb) {
+		switch c.Tick(dt) {
 		case StatusRunning:
 			return StatusRunning
 		case StatusFailure:

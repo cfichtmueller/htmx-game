@@ -45,8 +45,7 @@ type Acceleration struct {
 }
 
 type Behavior struct {
-	Tree   *bhv.Tree
-	BbFunc func(dt float64) *bhv.Blackboard
+	Tree *bhv.Tree
 }
 
 type BoundingBox struct {

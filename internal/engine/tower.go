@@ -14,11 +14,6 @@ func SpawnTower(world *World, x, y float64) {
 	world.Components.BoundingBoxes[entity] = &BoundingBox{Width: 30, Height: 30}
 	world.Components.Behaviors[entity] = &Behavior{
 		Tree: towerBehavior(world, entity),
-		BbFunc: func(dt float64) *bhv.Blackboard {
-			bb := bhv.NewBlackboard()
-			bb.Set("dt", dt)
-			return bb
-		},
 	}
 }
 
@@ -26,7 +21,7 @@ func towerBehavior(world *World, entity Entity) *bhv.Tree {
 	return bhv.NewTree(
 		bhv.SequenceNode(
 			&bhv.Node{
-				OnTick: func(n *bhv.Node, bb *bhv.Blackboard) bhv.Status {
+				OnTick: func(n *bhv.Node, dt float64) bhv.Status {
 					health := world.Components.Healths[entity]
 					if health.Dead {
 						return bhv.StatusFailure
@@ -44,7 +39,7 @@ func towerBehavior(world *World, entity Entity) *bhv.Tree {
 					},
 					BurstBehavior(
 						&BurstState{Interval: 0.3, BurstSizeFn: irandomF(3, 6)},
-						bhv.ActionNode(func(n *bhv.Node, bb *bhv.Blackboard) bhv.Status {
+						bhv.ActionNode(func(n *bhv.Node, dt float64) bhv.Status {
 							towerPos := world.Components.Positions[entity]
 							towerBb := world.Components.BoundingBoxes[entity]
 							spread := frandom(-0.02, 0.02)
@@ -83,13 +78,13 @@ func waitNode(s *WaitState, child *bhv.Node) *bhv.Node {
 	return &bhv.Node{
 		Data:     s,
 		Children: []*bhv.Node{child},
-		OnTick: func(n *bhv.Node, bb *bhv.Blackboard) bhv.Status {
+		OnTick: func(n *bhv.Node, dt float64) bhv.Status {
 			d := n.Data.(*WaitState)
-			d.timeRemaining = math.Max(0, d.timeRemaining-getDt(bb))
+			d.timeRemaining = math.Max(0, d.timeRemaining-dt)
 			if d.timeRemaining > 0 {
 				return d.WaitState
 			}
-			s := n.Children[0].Tick(bb)
+			s := n.Children[0].Tick(dt)
 			if s != bhv.StatusSuccess {
 				return s
 			}
@@ -116,7 +111,7 @@ func AimBehavior(s *AimState, child *bhv.Node) *bhv.Node {
 	return &bhv.Node{
 		Data:     s,
 		Children: []*bhv.Node{child},
-		OnTick: func(n *bhv.Node, bb *bhv.Blackboard) bhv.Status {
+		OnTick: func(n *bhv.Node, dt float64) bhv.Status {
 			d := n.Data.(*AimState)
 
 			if !d.isAiming && !d.hasAimed {
@@ -134,7 +129,7 @@ func AimBehavior(s *AimState, child *bhv.Node) *bhv.Node {
 			}
 
 			d.hasAimed = true
-			s := n.Children[0].Tick(bb)
+			s := n.Children[0].Tick(dt)
 			if s != bhv.StatusSuccess {
 				return s
 			}
@@ -158,7 +153,7 @@ func BurstBehavior(s *BurstState, child *bhv.Node) *bhv.Node {
 	return &bhv.Node{
 		Data:     s,
 		Children: []*bhv.Node{child},
-		OnTick: func(n *bhv.Node, bb *bhv.Blackboard) bhv.Status {
+		OnTick: func(n *bhv.Node, dt float64) bhv.Status {
 			d := n.Data.(*BurstState)
 			if d.remaining == 0 {
 				d.remaining = d.BurstSize
@@ -168,21 +163,17 @@ func BurstBehavior(s *BurstState, child *bhv.Node) *bhv.Node {
 				d.timeToNext = d.Interval
 				return bhv.StatusSuccess
 			}
-			d.timeToNext = math.Max(0, d.timeToNext-getDt(bb))
+			d.timeToNext = math.Max(0, d.timeToNext-dt)
 			if d.timeToNext > 0 {
 				return bhv.StatusRunning
 			}
 			d.remaining -= 1
 			d.timeToNext = d.Interval
-			s := n.Children[0].Tick(bb)
+			s := n.Children[0].Tick(dt)
 			if s != bhv.StatusSuccess {
 				return s
 			}
 			return bhv.StatusRunning
 		},
 	}
-}
-
-func getDt(bb *bhv.Blackboard) float64 {
-	return bb.MustGet("dt").(float64)
 }
