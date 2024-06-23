@@ -1,19 +1,11 @@
 {{define "Field"}}
   <div class="map" style="width: {{.Map.Width}}px; height: {{.Map.Height}}px; left: {{.Map.Left}}px; top: {{.Map.Top}}px;">
     {{range .Cells}}
-    <div
+        <img
         class="cell"
-        style="left: {{.Left}}px; top: {{.Top}}px; width: {{.Width}}px; height: {{.Height}}px; transform: rotate({{.Rotation}}rad);">
-        {{if eq .Type "bullet"}}
-        {{template "BulletShape" .}}
-        {{else if eq .Type "player"}}
-        {{template "PlayerShape" .}}
-        {{else if eq .Type "tower"}}
-        {{template "TowerShape" .}}
-        {{else}}
-        {{template "GenericShape" .}}
-        {{end}}
-    </div>
+        style="left: {{.Left}}px; top: {{.Top}}px; transform: rotate({{.Rotation}}rad); width:{{.Width}}px; height:auto; z-index:{{.ZIndex}};"
+        src="/img/{{.Image}}"
+        />
     {{end}}
   </div>
 {{end}}

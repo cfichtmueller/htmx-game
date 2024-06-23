@@ -23,6 +23,12 @@ func main() {
 		ui.RenderScript(w, name)
 	})
 
+	http.HandleFunc("/img/{name}", func(w http.ResponseWriter, r *http.Request) {
+		name := r.PathValue("name")
+		w.Header().Add("Content-Type", "image/png")
+		ui.RenderImage(w, name)
+	})
+
 	http.HandleFunc("/css/style.css", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Content-Type", "text/css")
 		w.Write(ui.Css)
@@ -30,8 +36,10 @@ func main() {
 
 	http.HandleFunc("/player/{id}", func(w http.ResponseWriter, r *http.Request) {
 		id := r.PathValue("id")
-		p := game.State.PlayerWithId(id)
-		if p == nil {
+		game.Lock()
+		defer game.Unlock()
+		p, ok := game.State.PlayerWithId(id)
+		if !ok {
 			w.WriteHeader(404)
 			return
 		}
@@ -43,7 +51,7 @@ func main() {
 				return
 			}
 
-			if !must("render index", ui.RenderIndexPage(w, game.State, p)) {
+			if !must("render index", ui.RenderIndexPage(w, game.State, id)) {
 				return
 			}
 			if includeShell && !must("render shell end", ui.RenderShellEnd(w)) {
@@ -67,18 +75,18 @@ func main() {
 		var input PlayerInput
 		json.Unmarshal(b, &input)
 
-		if p.Agent.Dead {
+		if engine.IsEntityDead(game.World(), p) {
 			return
 		}
 
 		for _, cmd := range input.Commands {
 			switch cmd.M {
 			case "setVelocity":
-				p.Agent.SetVelocity(p.Agent.MaxVelocity * cmd.V)
+				engine.SetEntityVelocity(game.World(), p, cmd.V)
 			case "setRotation":
-				p.Agent.Direction = cmd.V
+				engine.SetEntityDirection(game.World(), p, cmd.V)
 			case "respawn":
-				p.Die()
+				engine.KillEntity(game.World(), p)
 				return
 			}
 		}
@@ -90,8 +98,10 @@ func main() {
 			return
 		}
 		id := r.PathValue("id")
-		p := game.State.PlayerWithId(id)
-		if p == nil {
+		game.Lock()
+		defer game.Unlock()
+		p, ok := game.State.PlayerWithId(id)
+		if !ok {
 			w.WriteHeader(404)
 			return
 		}
@@ -108,8 +118,10 @@ func main() {
 			w.WriteHeader(204)
 			return
 		}
+		game.Lock()
 		p := game.State.SpawnPlayer()
-		w.Header().Set("Location", "/player/"+p.ID)
+		w.Header().Set("Location", "/player/"+p)
+		game.Unlock()
 		w.Header().Set("Cache-Control", "no-store")
 		w.WriteHeader(302)
 	})
@@ -125,7 +137,9 @@ func main() {
 			return
 		}
 
+		game.Lock()
 		cstate.Update(game.State)
+		game.Unlock()
 
 		if !must("render field", ui.RenderField(w, cstate)) {
 			return

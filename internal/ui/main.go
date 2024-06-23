@@ -18,6 +18,8 @@ var (
 	Css []byte
 	//go:embed html/*
 	htmlFiles embed.FS
+	//go:embed img/*
+	imgFiles  embed.FS
 	templates = template.Must(template.New("").ParseFS(htmlFiles, "html/*.html"))
 )
 
@@ -32,6 +34,17 @@ func RenderScript(w io.Writer, name string) error {
 	return nil
 }
 
+func RenderImage(w io.Writer, name string) error {
+	b, err := imgFiles.ReadFile("img/" + name)
+	if err != nil {
+		return fmt.Errorf("unable to read image %s: %v", name, err)
+	}
+	if _, err = w.Write(b); err != nil {
+		return fmt.Errorf("unable to write image %s: %v", name, err)
+	}
+	return nil
+}
+
 func RenderShellStart(w io.Writer) error {
 	return renderTemplate(w, "ShellStart", nil)
 }
@@ -40,15 +53,19 @@ func RenderShellEnd(w io.Writer) error {
 	return renderTemplate(w, "ShellEnd", nil)
 }
 
-type indexPageModel struct {
-	State  *engine.State
-	Player *engine.Player
+type playerModel struct {
+	ID string
 }
 
-func RenderIndexPage(w io.Writer, s *engine.State, p *engine.Player) error {
+type indexPageModel struct {
+	State  *engine.State
+	Player playerModel
+}
+
+func RenderIndexPage(w io.Writer, s *engine.State, p string) error {
 	return renderTemplate(w, "IndexPage", indexPageModel{
 		State:  s,
-		Player: p,
+		Player: playerModel{ID: p},
 	})
 }
 
@@ -57,10 +74,10 @@ func RenderField(w io.Writer, s *client.State) error {
 }
 
 type osdModel struct {
-	Player *engine.Player
+	Player engine.Entity
 }
 
-func RenderOsd(w io.Writer, p *engine.Player) error {
+func RenderOsd(w io.Writer, p engine.Entity) error {
 	return renderTemplate(w, "Osd", osdModel{Player: p})
 }
 

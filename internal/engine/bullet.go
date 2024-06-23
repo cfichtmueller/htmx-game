@@ -1,25 +1,10 @@
 package engine
 
-func NewBulletCell(x, y, direction, velocity, ttl float64) *Cell {
-	return &Cell{
-		Agent: &Agent{
-			X:         x,
-			Y:         y,
-			Width:     10,
-			Height:    10,
-			Direction: direction,
-			Velocity:  velocity,
-			Ages:      true,
-			TTL:       ttl,
-		},
-		Color: "#e74c3c",
-		Type:  "bullet",
-		HandlePlayerCollision: func(c *Cell, p *Player) {
-			if p.Agent.Dead {
-				return
-			}
-			p.Die()
-			c.Die()
-		},
-	}
+func SpawnBullet(world *World, x, y, direction, velocity, ttl float64) {
+	entity := world.AddEntity(Bullet)
+
+	world.Components.Positions[entity] = &Position{X: x - 5, Y: y - 5, Direction: direction}
+	world.Components.Velocities[entity] = &Velocity{Current: velocity}
+	world.Components.BoundingBoxes[entity] = &BoundingBox{Width: 10, Height: 10}
+	world.Components.Healths[entity] = &Health{Ages: true, TTL: ttl}
 }

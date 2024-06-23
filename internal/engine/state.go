@@ -1,87 +1,70 @@
 package engine
 
-import "sync"
+import (
+	"math"
+	"sync"
+)
 
 type State struct {
-	mu      sync.Mutex
-	Width   float64
-	Height  float64
-	Cells   *CellList
-	Players *PlayerList
+	mu          sync.Mutex
+	World       *World
+	Width       float64
+	Height      float64
+	playerIndex map[string]Entity
 }
 
 func NewState(width, height float64) *State {
+	world := NewWorld(width, height)
+
+	world.AddSystem(NewBehaviorSystem())
+
+	world.AddSystem(NewMovementSystem())
+
+	collisionDetection := NewCollisionDetectionSystem()
+	collisionDetection.RegisterHandler(Bullet, Tank, &BulletTankCollisionHandler{})
+	collisionDetection.RegisterHandler(Bullet, Player, &BulletPlayerCollisionHandler{})
+	collisionDetection.RegisterHandler(Player, Tower, &PlayerTowerCollisionHandler{})
+	collisionDetection.RegisterHandler(Player, SpeedPowerUp, &PlayerPowerUpCollisionHandler{F: func(entity Entity, components *ComponentStorage) {
+		components.Velocities[entity].Max += 5
+	}})
+	collisionDetection.RegisterHandler(Tank, Player, &TankPlayerCollisionHandler{})
+
+	world.AddSystem(collisionDetection)
+	world.AddSystem(NewHealthSystem(world))
+
+	world.AddSystem(NewSpeedPowerUpSystem(world))
+
+	SpawnTankShelter(world, frandom(0, world.width), frandom(0, world.height), math.Pi/2)
+
 	return &State{
-		Width:   width,
-		Height:  height,
-		Cells:   NewCellList(),
-		Players: NewPlayerList(),
+		World:       world,
+		Width:       width,
+		Height:      height,
+		playerIndex: make(map[string]Entity),
 	}
 }
 
 func (s *State) Update(dt float64) {
 	s.mu.Lock()
-	s.Cells.Each(func(c *Cell) { c.Update(dt) })
-	s.Cells.Filter(func(c *Cell) bool { return !c.Agent.Dead })
-
-	s.Players.Each(func(p *Player) {
-		p.Update(dt)
-		c, ok := intersects(p, s.Cells.Cells)
-		if !ok || c.HandlePlayerCollision == nil {
-			return
-		}
-		c.HandlePlayerCollision(c, p)
-	})
-	s.Players.Filter(func(p *Player) bool { return !p.Agent.Decayed })
-	/*for _, p := range s.Players {
-		p.Update(dt)
-		c, ok := intersects(p, s.Cells.Cells)
-		if !ok || c.HandlePlayerCollision == nil {
-			continue
-		}
-		c.HandlePlayerCollision(c, p)
-		if p.Agent.Decayed {
-			delete(s.Players, p.ID)
-		}
-
-	}*/
-	s.mu.Unlock()
+	defer s.mu.Unlock()
+	s.World.Update(dt)
 }
 
-func (s *State) AddCell(c *Cell) {
+func (s *State) SpawnPlayer() string {
 	s.mu.Lock()
-	s.Cells.Add(c)
+	id := randomId()
+	e := SpawnPlayer(
+		s.World,
+		s.Width/2,
+		s.Height/2,
+		math.Pi,
+	)
+	s.playerIndex[id] = e
 	s.mu.Unlock()
+	return id
 }
 
-func (s *State) SpawnPlayer() *Player {
-	s.mu.Lock()
-	p := &Player{
-		ID: randomId(),
-		Agent: &Agent{
-			X:                  s.Width / 2,
-			Y:                  s.Height / 2,
-			Width:              30,
-			Height:             30,
-			MaxVelocity:        50,
-			MaxAngularVelocity: 10,
-			Friction:           10,
-			Decays:             true,
-			DecayTTL:           10,
-		},
-		Color: "#3498db",
-	}
-	s.Players.Add(p)
-	//s.Players[p.ID] = p
-	s.mu.Unlock()
-	return p
-}
-
-func (s *State) PlayerWithId(id string) *Player {
-	return s.Players.FindWithId(id)
-	/*p, ok := s.Players[id]
-	if !ok {
-		return nil
-	}
-	return p*/
+func (s *State) PlayerWithId(id string) (Entity, bool) {
+	entity, ok := s.playerIndex[id]
+	return entity, ok
 }

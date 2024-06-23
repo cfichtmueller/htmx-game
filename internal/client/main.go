@@ -4,11 +4,58 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"sync"
 
 	"cfichtmueller.com/htmx-game/internal/engine"
 )
 
+const (
+	Z_BASE int = iota
+	Z_GROUND
+	Z_BUILDING
+	Z_ABOVE_GROUND
+)
+
+var (
+	renders = map[engine.EntityType]EntityRender{
+		engine.Bullet: {
+			Alive: "bullet.png",
+			Z:     Z_ABOVE_GROUND,
+		},
+		engine.Player: {
+			Alive: "player.png",
+			Dead:  "player_dead.png",
+			Z:     Z_GROUND,
+		},
+		engine.Tank: {
+			Alive: "tank.png",
+			Dead:  "tank_dead.png",
+			Z:     Z_GROUND,
+		},
+		engine.TankShelter: {
+			Alive: "shelter.png",
+			Z:     Z_BUILDING,
+		},
+		engine.Tower: {
+			Alive: "tower.png",
+			Dead:  "tower_dead.png",
+			Z:     Z_GROUND,
+		},
+		engine.SpeedPowerUp: {
+			Alive: "powerup_speed.png",
+			Z:     Z_GROUND,
+		},
+	}
+)
+
+type EntityRender struct {
+	Alive string
+	Dead  string
+	Z     int
+}
+
 type State struct {
+	mu     sync.Mutex
 	Screen *Screen
 	Map    Map
 	Cells  []Cell
@@ -34,27 +81,41 @@ func NewState(w, h string) (*State, error) {
 }
 
 func (v *State) Update(s *engine.State) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
 	v.Screen.ScaleTo(s.Width, s.Height)
 
-	v.Cells = make([]Cell, 0, s.Cells.Length())
+	for _, entity := range s.World.Entities {
+		t := s.World.Components.EntityTypes[entity]
+		position, hasPosition := s.World.Components.Positions[entity]
+		bb, hasBb := s.World.Components.BoundingBoxes[entity]
+		if !hasPosition || !hasBb {
+			continue
+		}
 
-	s.Cells.Each(func(c *engine.Cell) {
-		v.Cells = append(v.Cells, cellFromAgent(
-			v.Screen,
-			c.Color,
-			c.Agent,
-			c.Type,
-		))
-	})
+		health, hasHealth := s.World.Components.Healths[entity]
+		isDead := false
+		if hasHealth && health.Dead {
+			isDead = true
+		}
 
-	s.Players.Each(func(p *engine.Player) {
-		v.Cells = append(v.Cells, cellFromAgent(
-			v.Screen,
-			p.Color,
-			p.Agent,
-			"player",
-		))
-	})
+		r := renders[t.Type]
+		image := r.Alive
+		if isDead && r.Dead != "" {
+			image = r.Dead
+
+		}
+
+		v.Cells = append(v.Cells, Cell{
+			Width:    v.Screen.MapLength(bb.Width, 10),
+			Height:   v.Screen.MapLength(bb.Height, 10),
+			Left:     v.Screen.MapX(position.X),
+			Top:      v.Screen.MapY(position.Y),
+			Rotation: position.Direction + math.Pi/2,
+			Image:    image,
+			ZIndex:   r.Z,
+		})
+	}
 
 	v.Map = Map{
 		Width:  v.Screen.MapLength(s.Width, 1),
@@ -112,18 +173,6 @@ type Cell struct {
 	Left     int
 	Top      int
 	Rotation float64
-	Color    string
-	Type     string
-}
-
-func cellFromAgent(s *Screen, color string, a *engine.Agent, t string) Cell {
-	return Cell{
-		Width:    s.MapLength(a.Width, 10),
-		Height:   s.MapLength(a.Height, 10),
-		Left:     s.MapX(a.X),
-		Top:      s.MapY(a.Y),
-		Rotation: a.Direction + math.Pi/2,
-		Color:    color,
-		Type:     t,
-	}
+	Image    string
+	ZIndex   int
 }

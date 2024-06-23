@@ -2,75 +2,63 @@ package engine
 
 import (
 	"math"
-	"math/rand"
 
 	"cfichtmueller.com/htmx-game/internal/engine/bhv"
 )
 
-type TowerCellData struct {
-	behavior *bhv.Tree
-}
+func SpawnTower(world *World, x, y float64) {
+	entity := world.AddEntity(Tower)
 
-func NewTowerCell(x, y float64) *Cell {
-	return &Cell{
-		Agent: &Agent{
-			X:                  x,
-			Y:                  y,
-			Width:              30,
-			Height:             30,
-			MaxAngularVelocity: math.Pi,
-		},
-		Type:  "tower",
-		Color: "#e67e22",
-		Data: &TowerCellData{
-			behavior: towerBehavor(),
-		},
-		HandleUpdate: func(c *Cell, dt float64) CellUpdateResult {
-			cellList := NewCellList()
+	world.Components.Healths[entity] = &Health{Decays: true, DecayTTL: 30}
+	world.Components.Positions[entity] = &Position{X: x, Y: y}
+	world.Components.BoundingBoxes[entity] = &BoundingBox{Width: 30, Height: 30}
+	world.Components.Behaviors[entity] = &Behavior{
+		Tree: towerBehavior(world, entity),
+		BbFunc: func(dt float64) *bhv.Blackboard {
 			bb := bhv.NewBlackboard()
-			bb.Set("agent", c.Agent)
 			bb.Set("dt", dt)
-			bb.Set("cells", cellList)
-
-			d := c.Data.(*TowerCellData)
-			d.behavior.Tick(bb)
-			return CellUpdateResult{Cells: cellList.Cells}
-		},
-		HandlePlayerCollision: func(c *Cell, p *Player) {
-			c.Die()
+			return bb
 		},
 	}
 }
 
-func generateBullets(count int, x, y, direction, spread, velocity, ttl float64) []*Cell {
-	res := make([]*Cell, count)
-	for i := 0; i < count; i++ {
-		res[i] = NewBulletCell(x, y, direction+spread*(rand.Float64()-0.5), velocity, ttl)
-	}
-	return res
-}
-
-func towerBehavor() *bhv.Tree {
+func towerBehavior(world *World, entity Entity) *bhv.Tree {
 	return bhv.NewTree(
-		waitNode(
-			&WaitState{TimeToWaitFn: frandomF(5, 10)},
-			AimBehavior(
-				&AimState{TargetDirectionFn: frandomF(0, math.Pi*2)},
-				BurstBehavior(
-					&BurstState{Interval: 0.3, BurstSizeFn: irandomF(3, 6)},
-					bhv.ActionNode(func(n *bhv.Node, bb *bhv.Blackboard) bhv.Status {
-						agent := getAgent(bb)
-						bb.MustGet("cells").(*CellList).Add(generateBullets(
-							1,
-							agent.X+agent.Width/2,
-							agent.Y+agent.Height/2,
-							agent.Direction,
-							0.02*rand.Float64(),
-							70,
-							10,
-						)...)
-						return bhv.StatusSuccess
-					}),
+		bhv.SequenceNode(
+			&bhv.Node{
+				OnTick: func(n *bhv.Node, bb *bhv.Blackboard) bhv.Status {
+					health := world.Components.Healths[entity]
+					if health.Dead {
+						return bhv.StatusFailure
+					}
+					return bhv.StatusSuccess
+				},
+			},
+			waitNode(
+				&WaitState{TimeToWaitFn: frandomF(5, 10)},
+				AimBehavior(
+					&AimState{
+						World:             world,
+						Entity:            entity,
+						TargetDirectionFn: frandomF(0, math.Pi*2),
+					},
+					BurstBehavior(
+						&BurstState{Interval: 0.3, BurstSizeFn: irandomF(3, 6)},
+						bhv.ActionNode(func(n *bhv.Node, bb *bhv.Blackboard) bhv.Status {
+							towerPos := world.Components.Positions[entity]
+							towerBb := world.Components.BoundingBoxes[entity]
+							spread := frandom(-0.02, 0.02)
+							SpawnBullet(
+								world,
+								towerPos.X+towerBb.Width/2,
+								towerPos.Y+towerBb.Height/2,
+								towerPos.Direction+spread,
+								70,
+								10,
+							)
+							return bhv.StatusSuccess
+						}),
+					),
 				),
 			),
 		),
@@ -78,6 +66,7 @@ func towerBehavor() *bhv.Tree {
 }
 
 type WaitState struct {
+	InitialWait   float64
 	TimeToWait    float64
 	TimeToWaitFn  FFunc
 	WaitState     bhv.Status
@@ -87,6 +76,9 @@ type WaitState struct {
 func waitNode(s *WaitState, child *bhv.Node) *bhv.Node {
 	if s.WaitState == "" {
 		s.WaitState = bhv.StatusRunning
+	}
+	if s.InitialWait > 0 {
+		s.timeRemaining = s.InitialWait
 	}
 	return &bhv.Node{
 		Data:     s,
@@ -112,9 +104,12 @@ func waitNode(s *WaitState, child *bhv.Node) *bhv.Node {
 }
 
 type AimState struct {
+	World             *World
+	Entity            Entity
 	TargetDirectionFn func() float64
 	isAiming          bool
 	hasAimed          bool
+	targetDirection   float64
 }
 
 func AimBehavior(s *AimState, child *bhv.Node) *bhv.Node {
@@ -123,15 +118,19 @@ func AimBehavior(s *AimState, child *bhv.Node) *bhv.Node {
 		Children: []*bhv.Node{child},
 		OnTick: func(n *bhv.Node, bb *bhv.Blackboard) bhv.Status {
 			d := n.Data.(*AimState)
-			agent := getAgent(bb)
 
-			if !d.isAiming {
-				agent.SetTargetDirection(d.TargetDirectionFn())
+			if !d.isAiming && !d.hasAimed {
+				d.targetDirection = d.TargetDirectionFn()
 				d.isAiming = true
 			}
 
-			if !d.hasAimed && agent.IsAutoRotating {
-				return bhv.StatusRunning
+			if d.isAiming {
+				position := d.World.Components.Positions[d.Entity]
+				dirDiff := d.targetDirection - position.Direction
+				position.Direction += math.Min(dirDiff, math.Pi/6)
+				if dirDiff != 0 {
+					return bhv.StatusRunning
+				}
 			}
 
 			d.hasAimed = true
@@ -186,8 +185,4 @@ func BurstBehavior(s *BurstState, child *bhv.Node) *bhv.Node {
 
 func getDt(bb *bhv.Blackboard) float64 {
 	return bb.MustGet("dt").(float64)
-}
-
-func getAgent(bb *bhv.Blackboard) *Agent {
-	return bb.MustGet("agent").(*Agent)
 }
