@@ -179,7 +179,7 @@ func NewSpeedPowerUpSystem(world *World) *SpeedPowerUpSystem {
 	return &SpeedPowerUpSystem{
 		behavior: bhv.NewTree(
 			bhv.SequenceNode(
-				waitNode(&WaitState{TimeToWaitFn: frandomF(5, 7)},
+				bhv.WaitNode(&bhv.WaitState{TimeToWaitFn: frandomF(5, 7)},
 					&bhv.Node{
 						OnTick: func(n *bhv.Node, dt float64) bhv.Status {
 							entity := world.AddEntity(SpeedPowerUp)

@@ -12,8 +12,8 @@ func SpawnTankShelter(world *World, x, y, direction float64) {
 	world.Components.BoundingBoxes[entity] = &BoundingBox{Width: 30, Height: 30}
 	world.Components.Behaviors[entity] = &Behavior{
 		Tree: bhv.NewTree(
-			waitNode(
-				&WaitState{TimeToWaitFn: frandomF(2, 4)},
+			bhv.WaitNode(
+				&bhv.WaitState{TimeToWaitFn: frandomF(2, 4)},
 				&bhv.Node{OnTick: func(n *bhv.Node, dt float64) bhv.Status {
 					SpawnTank(
 						world,
@@ -46,8 +46,8 @@ func SpawnTank(world *World, x, y, direction float64) {
 						return bhv.StatusSuccess
 					},
 				},
-				waitNode(
-					&WaitState{TimeToWaitFn: frandomF(2, 4), InitialWait: 5},
+				bhv.WaitNode(
+					&bhv.WaitState{TimeToWaitFn: frandomF(2, 4), InitialWait: 5},
 					&bhv.Node{
 						OnTick: func(n *bhv.Node, dt float64) bhv.Status {
 							world.Components.Positions[entity].Direction += frandom(-math.Pi/2, math.Pi/2)

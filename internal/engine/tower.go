@@ -29,16 +29,16 @@ func towerBehavior(world *World, entity Entity) *bhv.Tree {
 					return bhv.StatusSuccess
 				},
 			},
-			waitNode(
-				&WaitState{TimeToWaitFn: frandomF(5, 10)},
+			bhv.WaitNode(
+				&bhv.WaitState{TimeToWaitFn: frandomF(5, 10)},
 				AimBehavior(
 					&AimState{
 						World:             world,
 						Entity:            entity,
 						TargetDirectionFn: frandomF(0, math.Pi*2),
 					},
-					BurstBehavior(
-						&BurstState{Interval: 0.3, BurstSizeFn: irandomF(3, 6)},
+					bhv.BurstBehavior(
+						&bhv.BurstState{Interval: 0.3, BurstSizeFn: irandomF(3, 6)},
 						bhv.ActionNode(func(n *bhv.Node, dt float64) bhv.Status {
 							towerPos := world.Components.Positions[entity]
 							towerBb := world.Components.BoundingBoxes[entity]
@@ -58,44 +58,6 @@ func towerBehavior(world *World, entity Entity) *bhv.Tree {
 			),
 		),
 	)
-}
-
-type WaitState struct {
-	InitialWait   float64
-	TimeToWait    float64
-	TimeToWaitFn  FFunc
-	WaitState     bhv.Status
-	timeRemaining float64
-}
-
-func waitNode(s *WaitState, child *bhv.Node) *bhv.Node {
-	if s.WaitState == "" {
-		s.WaitState = bhv.StatusRunning
-	}
-	if s.InitialWait > 0 {
-		s.timeRemaining = s.InitialWait
-	}
-	return &bhv.Node{
-		Data:     s,
-		Children: []*bhv.Node{child},
-		OnTick: func(n *bhv.Node, dt float64) bhv.Status {
-			d := n.Data.(*WaitState)
-			d.timeRemaining = math.Max(0, d.timeRemaining-dt)
-			if d.timeRemaining > 0 {
-				return d.WaitState
-			}
-			s := n.Children[0].Tick(dt)
-			if s != bhv.StatusSuccess {
-				return s
-			}
-			if d.TimeToWaitFn == nil {
-				d.timeRemaining = d.TimeToWait
-			} else {
-				d.timeRemaining = d.TimeToWaitFn()
-			}
-			return bhv.StatusSuccess
-		},
-	}
 }
 
 type AimState struct {
@@ -137,43 +99,6 @@ func AimBehavior(s *AimState, child *bhv.Node) *bhv.Node {
 			d.isAiming = false
 			d.hasAimed = false
 			return bhv.StatusSuccess
-		},
-	}
-}
-
-type BurstState struct {
-	BurstSize   int
-	BurstSizeFn IFunc
-	Interval    float64
-	remaining   int
-	timeToNext  float64
-}
-
-func BurstBehavior(s *BurstState, child *bhv.Node) *bhv.Node {
-	return &bhv.Node{
-		Data:     s,
-		Children: []*bhv.Node{child},
-		OnTick: func(n *bhv.Node, dt float64) bhv.Status {
-			d := n.Data.(*BurstState)
-			if d.remaining == 0 {
-				d.remaining = d.BurstSize
-				if d.BurstSizeFn != nil {
-					d.remaining = d.BurstSizeFn()
-				}
-				d.timeToNext = d.Interval
-				return bhv.StatusSuccess
-			}
-			d.timeToNext = math.Max(0, d.timeToNext-dt)
-			if d.timeToNext > 0 {
-				return bhv.StatusRunning
-			}
-			d.remaining -= 1
-			d.timeToNext = d.Interval
-			s := n.Children[0].Tick(dt)
-			if s != bhv.StatusSuccess {
-				return s
-			}
-			return bhv.StatusRunning
 		},
 	}
 }
