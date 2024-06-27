@@ -7,13 +7,16 @@ import (
 	"sync"
 
 	"cfichtmueller.com/htmx-game/internal/engine"
+	"cfichtmueller.com/htmx-game/internal/engine/physics"
 )
 
 const (
-	Z_BASE int = iota
-	Z_GROUND
-	Z_BUILDING
-	Z_ABOVE_GROUND
+	Z_BASE         = 0
+	Z_GROUND       = 10
+	Z_POWER_UP     = 20
+	Z_GROUND_UNIT  = 30
+	Z_BUILDING     = 40
+	Z_ABOVE_GROUND = 50
 )
 
 var (
@@ -25,12 +28,12 @@ var (
 		engine.Player: {
 			Alive: "player.png",
 			Dead:  "player_dead.png",
-			Z:     Z_GROUND,
+			Z:     Z_GROUND_UNIT,
 		},
 		engine.Tank: {
 			Alive: "tank.png",
 			Dead:  "tank_dead.png",
-			Z:     Z_GROUND,
+			Z:     Z_GROUND_UNIT,
 		},
 		engine.TankShelter: {
 			Alive: "shelter.png",
@@ -39,11 +42,11 @@ var (
 		engine.Tower: {
 			Alive: "tower.png",
 			Dead:  "tower_dead.png",
-			Z:     Z_GROUND,
+			Z:     Z_POWER_UP,
 		},
 		engine.SpeedPowerUp: {
 			Alive: "powerup_speed.png",
-			Z:     Z_GROUND,
+			Z:     Z_POWER_UP,
 		},
 	}
 )
@@ -58,6 +61,7 @@ type State struct {
 	mu     sync.Mutex
 	Screen *Screen
 	Map    Map
+	Masks  []Mask
 	Cells  []Cell
 }
 
@@ -77,52 +81,100 @@ func NewState(w, h string) (*State, error) {
 			Height: float64(height),
 			Factor: 1,
 		},
+		Masks: make([]Mask, 0),
 	}, nil
 }
 
-func (v *State) Update(s *engine.State) {
+func (v *State) Update(e *engine.Engine) {
 	v.mu.Lock()
 	defer v.mu.Unlock()
-	v.Screen.ScaleTo(s.Width, s.Height)
+	screen := v.Screen
+	screen.ScaleTo(e.World.Width, e.World.Height)
 
-	for _, entity := range s.World.Entities {
-		t := s.World.Components.EntityTypes[entity]
-		position, hasPosition := s.World.Components.Positions[entity]
-		bb, hasBb := s.World.Components.BoundingBoxes[entity]
+	if screen.xOffset > 0 {
+		v.Masks = []Mask{
+			{
+				Left:   0,
+				Top:    0,
+				Width:  int(screen.xOffset),
+				Height: int(screen.Height),
+			},
+			{
+				Left:   int(v.Screen.xOffset) + screen.MapLength(e.World.Width, 0),
+				Top:    0,
+				Width:  int(v.Screen.xOffset),
+				Height: int(v.Screen.Height),
+			},
+		}
+	} else if v.Screen.yOffset > 0 {
+		v.Masks = []Mask{
+			{
+				Left:   0,
+				Top:    0,
+				Width:  int(v.Screen.Width),
+				Height: int(v.Screen.yOffset),
+			},
+			{
+				Left:   0,
+				Top:    int(screen.yOffset) + screen.MapLength(e.World.Height, 0),
+				Width:  int(v.Screen.Width),
+				Height: int(v.Screen.yOffset),
+			},
+		}
+	}
+
+	for _, entity := range e.World.Entities {
+		t := e.World.Components.EntityTypes[entity]
+		position, hasPosition := e.World.Components.Positions[entity]
+		bb, hasBb := e.World.Components.BoundingBoxes[entity]
 		if !hasPosition || !hasBb {
 			continue
 		}
 
-		health, hasHealth := s.World.Components.Healths[entity]
+		if position.X < 0 || position.Y < 0 || position.X > e.World.Width || position.Y > e.World.Height {
+			continue
+		}
+
+		health, hasHealth := e.World.Components.Healths[entity]
 		isDead := false
 		if hasHealth && health.Dead {
 			isDead = true
 		}
 
 		r := renders[t.Type]
+		zIndex := r.Z
 		image := r.Alive
-		if isDead && r.Dead != "" {
-			image = r.Dead
-
+		if isDead {
+			if r.Dead != "" {
+				image = r.Dead
+			}
+			zIndex--
 		}
 
 		v.Cells = append(v.Cells, Cell{
-			Width:    v.Screen.MapLength(bb.Width, 10),
-			Height:   v.Screen.MapLength(bb.Height, 10),
+			Width:    v.Screen.MapLength(bb.W, 10),
+			Height:   v.Screen.MapLength(bb.H, 10),
 			Left:     v.Screen.MapX(position.X),
 			Top:      v.Screen.MapY(position.Y),
-			Rotation: position.Direction + math.Pi/2,
+			Rotation: position.Direction + physics.Deg90,
 			Image:    image,
-			ZIndex:   r.Z,
+			ZIndex:   zIndex,
 		})
 	}
 
 	v.Map = Map{
-		Width:  v.Screen.MapLength(s.Width, 1),
-		Height: v.Screen.MapLength(s.Height, 1),
+		Width:  v.Screen.MapLength(e.World.Width, 1),
+		Height: v.Screen.MapLength(e.World.Height, 1),
 		Left:   v.Screen.MapX(0),
 		Top:    v.Screen.MapY(0),
 	}
+}
+
+type Mask struct {
+	Width  int
+	Height int
+	Left   int
+	Top    int
 }
 
 type Screen struct {

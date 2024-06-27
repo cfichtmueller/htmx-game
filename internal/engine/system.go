@@ -4,10 +4,48 @@ import (
 	"math"
 
 	"cfichtmueller.com/htmx-game/internal/engine/bhv"
+	"cfichtmueller.com/htmx-game/internal/engine/physics"
 )
 
 type System interface {
 	Update(entities []Entity, components *ComponentStorage, dt float64)
+}
+
+type AutoMoveSystem struct{}
+
+func NewAutoMoveSystem() *AutoMoveSystem {
+	return &AutoMoveSystem{}
+}
+
+func (s *AutoMoveSystem) Update(entities []Entity, components *ComponentStorage, dt float64) {
+	for _, entity := range entities {
+		autoMove, hasAutoMove := components.AutoMove[entity]
+		if !hasAutoMove || !autoMove.TargetDirectionActive {
+			continue
+		}
+		position, hasPosition := components.Positions[entity]
+		acceleration, hasAcceleration := components.Accelerations[entity]
+		velocity, hasVelocity := components.Velocities[entity]
+		if !hasPosition || !hasVelocity {
+			continue
+		}
+
+		delta := physics.ShortesRotationDirection(position.Direction, autoMove.TargetDirection)
+		if math.Abs(delta) > physics.Deg1*5 {
+			if hasAcceleration {
+				acceleration.AngularCurrent = math.Copysign(acceleration.AngularMax, delta)
+			} else {
+				velocity.AngularCurrent = math.Copysign(velocity.AngularMax, delta)
+			}
+		} else {
+			if hasAcceleration {
+				acceleration.AngularCurrent = 0
+			}
+			velocity.AngularCurrent = 0
+			position.Direction = autoMove.TargetDirection
+			autoMove.TargetDirectionActive = false
+		}
+	}
 }
 
 type BehaviorSystem struct{}
@@ -31,7 +69,7 @@ type Collision struct {
 }
 
 type CollisionHandler interface {
-	HandleCollision(entityA, entityB Entity, components *ComponentStorage)
+	HandleCollision(entityA, entityB Entity, components *ComponentStorage, dt float64)
 }
 
 type CollisionDetectionSystem struct {
@@ -70,18 +108,15 @@ func (s *CollisionDetectionSystem) Update(entities []Entity, components *Compone
 				hasBBA &&
 				hasPosB &&
 				hasBBB &&
-				posA.X < posB.X+bbB.Width &&
-				posA.X+bbA.Width > posB.X &&
-				posA.Y < posB.Y+bbB.Height &&
-				posA.Y+bbA.Height > posB.Y {
+				physics.Collides(posA, bbA, posB, bbB) {
 				s.collisions = append(s.collisions, Collision{EntityA: entityA, EntityB: entityB})
-				s.handleCollision(entityA, entityB, components)
+				s.handleCollision(entityA, entityB, components, dt)
 			}
 		}
 	}
 }
 
-func (s *CollisionDetectionSystem) handleCollision(entityA, entityB Entity, components *ComponentStorage) {
+func (s *CollisionDetectionSystem) handleCollision(entityA, entityB Entity, components *ComponentStorage, dt float64) {
 	typeAComp, hasTypeA := components.EntityTypes[entityA]
 	typeBComp, hasTypeB := components.EntityTypes[entityB]
 
@@ -93,9 +128,9 @@ func (s *CollisionDetectionSystem) handleCollision(entityA, entityB Entity, comp
 	typeB := typeBComp.Type
 
 	if handler, ok := s.handlers[typeA][typeB]; ok {
-		handler.HandleCollision(entityA, entityB, components)
+		handler.HandleCollision(entityA, entityB, components, dt)
 	} else if handler, ok := s.handlers[typeB][typeA]; ok {
-		handler.HandleCollision(entityB, entityA, components)
+		handler.HandleCollision(entityB, entityA, components, dt)
 	}
 }
 
@@ -148,14 +183,24 @@ func (s *MovementSystem) Update(entities []Entity, components *ComponentStorage,
 		acceleration, hasAcceleration := components.Accelerations[entity]
 		friction, hasFriction := components.Frictions[entity]
 		velocity, hasVelocity := components.Velocities[entity]
+		health, hasHealth := components.Healths[entity]
 
 		if !hasPos || !hasVelocity {
 			continue
 		}
 
+		if hasHealth && health.Dead {
+			if hasAcceleration {
+				acceleration.Current = 0
+				acceleration.AngularCurrent = 0
+			}
+			velocity.Current = 0
+			velocity.AngularCurrent = 0
+		}
+
 		if hasAcceleration {
-			velocity.Current = math.Min(velocity.Max, velocity.Current+acceleration.Current*dt)
-			velocity.AngularCurrent = math.Min(velocity.AngularMax, velocity.AngularCurrent+acceleration.AngularCurrent*dt)
+			velocity.Current = physics.Accelerate(velocity.Current, velocity.Max, acceleration.Current, dt)
+			velocity.AngularCurrent = physics.Accelerate(velocity.AngularCurrent, velocity.AngularMax, acceleration.AngularCurrent, dt)
 		}
 
 		if hasFriction {
@@ -164,10 +209,56 @@ func (s *MovementSystem) Update(entities []Entity, components *ComponentStorage,
 		}
 
 		if hasPos && hasVelocity {
-			pos.Direction += velocity.AngularCurrent
-			pos.X += dt * velocity.Current * math.Cos(pos.Direction)
-			pos.Y += dt * velocity.Current * math.Sin(pos.Direction)
+			pos.Direction += velocity.AngularCurrent * dt
+			pos.X, pos.Y = physics.Move(pos.X, pos.Y, pos.Direction, velocity.Current, dt)
 		}
+	}
+}
+
+type SensingSystem struct{}
+
+func NewSensingSystem() *SensingSystem {
+	return &SensingSystem{}
+}
+
+func (s *SensingSystem) Update(entities []Entity, components *ComponentStorage, dt float64) {
+	for _, entity := range entities {
+		pos, hasPos := components.Positions[entity]
+		sensing, hasSensing := components.Sensings[entity]
+
+		if !hasPos || !hasSensing {
+			continue
+		}
+
+		sensing.SensedEntities = []SensedEntity{}
+
+		for _, otherEntity := range entities {
+			if entity == otherEntity {
+				continue
+			}
+
+			otherPos, hasOtherPos := components.Positions[otherEntity]
+			otherType, hasOtherType := components.EntityTypes[otherEntity]
+
+			if !hasOtherPos || !hasOtherType {
+				continue
+			}
+
+			sensingRange, hasSensingRange := sensing.Ranges[otherType.Type]
+			if !hasSensingRange {
+				continue
+			}
+
+			distance := physics.Distance(pos, otherPos)
+			if distance <= sensingRange {
+				sensing.SensedEntities = append(sensing.SensedEntities, SensedEntity{
+					Entity:   otherEntity,
+					Type:     otherType.Type,
+					Position: otherPos,
+				})
+			}
+		}
+
 	}
 }
 
@@ -183,15 +274,12 @@ func NewSpeedPowerUpSystem(world *World) *SpeedPowerUpSystem {
 					&bhv.Node{
 						OnTick: func(n *bhv.Node, dt float64) bhv.Status {
 							entity := world.AddEntity(SpeedPowerUp)
-							world.Components.Positions[entity] = &Position{
-								X:         frandom(70, world.width-70),
-								Y:         frandom(70, world.height-70),
-								Direction: -math.Pi / 2,
+							world.Components.Positions[entity] = &physics.Position{
+								X:         frandom(70, world.Width-70),
+								Y:         frandom(70, world.Height-70),
+								Direction: -physics.Deg90,
 							}
-							world.Components.BoundingBoxes[entity] = &BoundingBox{
-								Width:  20,
-								Height: 20,
-							}
+							world.Components.BoundingBoxes[entity] = &physics.Rectangle{W: 20, H: 20}
 							world.Components.Healths[entity] = &Health{
 								Ages: true,
 								TTL:  30,

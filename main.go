@@ -38,7 +38,7 @@ func main() {
 		id := r.PathValue("id")
 		game.Lock()
 		defer game.Unlock()
-		p, ok := game.State.PlayerWithId(id)
+		p, ok := game.PlayerWithId(id)
 		if !ok {
 			w.WriteHeader(404)
 			return
@@ -51,7 +51,7 @@ func main() {
 				return
 			}
 
-			if !must("render index", ui.RenderIndexPage(w, game.State, id)) {
+			if !must("render index", ui.RenderIndexPage(w, game, id)) {
 				return
 			}
 			if includeShell && !must("render shell end", ui.RenderShellEnd(w)) {
@@ -75,18 +75,18 @@ func main() {
 		var input PlayerInput
 		json.Unmarshal(b, &input)
 
-		if engine.IsEntityDead(game.World(), p) {
+		if engine.IsEntityDead(game.World, p) {
 			return
 		}
 
 		for _, cmd := range input.Commands {
 			switch cmd.M {
 			case "setVelocity":
-				engine.SetEntityVelocity(game.World(), p, cmd.V)
+				engine.SetEntityVelocity(game.World, p, cmd.V)
 			case "setRotation":
-				engine.SetEntityDirection(game.World(), p, cmd.V)
+				engine.SetEntityDirection(game.World, p, cmd.V)
 			case "respawn":
-				engine.KillEntity(game.World(), p)
+				engine.KillEntity(game.World, p)
 				return
 			}
 		}
@@ -100,7 +100,7 @@ func main() {
 		id := r.PathValue("id")
 		game.Lock()
 		defer game.Unlock()
-		p, ok := game.State.PlayerWithId(id)
+		p, ok := game.PlayerWithId(id)
 		if !ok {
 			w.WriteHeader(404)
 			return
@@ -119,7 +119,7 @@ func main() {
 			return
 		}
 		game.Lock()
-		p := game.State.SpawnPlayer()
+		p := game.SpawnPlayer()
 		w.Header().Set("Location", "/player/"+p)
 		game.Unlock()
 		w.Header().Set("Cache-Control", "no-store")
@@ -138,7 +138,7 @@ func main() {
 		}
 
 		game.Lock()
-		cstate.Update(game.State)
+		cstate.Update(game)
 		game.Unlock()
 
 		if !must("render field", ui.RenderField(w, cstate)) {

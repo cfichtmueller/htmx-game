@@ -58,13 +58,13 @@ type playerModel struct {
 }
 
 type indexPageModel struct {
-	State  *engine.State
+	Engine *engine.Engine
 	Player playerModel
 }
 
-func RenderIndexPage(w io.Writer, s *engine.State, p string) error {
+func RenderIndexPage(w io.Writer, e *engine.Engine, p string) error {
 	return renderTemplate(w, "IndexPage", indexPageModel{
-		State:  s,
+		Engine: e,
 		Player: playerModel{ID: p},
 	})
 }

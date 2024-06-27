@@ -1,4 +1,7 @@
 {{define "Field"}}
+  {{range .Masks}}
+  <div class="mask" style="width: {{.Width}}px; height: {{.Height}}px; left: {{.Left}}px; top: {{.Top}}px;"></div>
+  {{end}}
   <div class="map" style="width: {{.Map.Width}}px; height: {{.Map.Height}}px; left: {{.Map.Left}}px; top: {{.Map.Top}}px;">
     {{range .Cells}}
         <img

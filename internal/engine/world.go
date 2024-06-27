@@ -6,8 +6,8 @@ type World struct {
 	entitiesToRemove map[Entity]bool
 	Components       *ComponentStorage
 	systems          []System
-	width            float64
-	height           float64
+	Width            float64
+	Height           float64
 }
 
 func NewWorld(width, height float64) *World {
@@ -16,8 +16,8 @@ func NewWorld(width, height float64) *World {
 		entitiesToRemove: make(map[Entity]bool),
 		Components:       NewComponentStorage(),
 		systems:          make([]System, 0),
-		width:            width,
-		height:           height,
+		Width:            width,
+		Height:           height,
 	}
 }
 

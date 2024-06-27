@@ -1,23 +1,39 @@
 package engine
 
-type BulletTankCollisionHandler struct{}
+import (
+	"cfichtmueller.com/htmx-game/internal/engine/physics"
+)
 
-func (h *BulletTankCollisionHandler) HandleCollision(entityA, entityB Entity, components *ComponentStorage) {
-	components.RemoveEntity(entityA)
+type BulletTankCollisionHandler struct {
+	world *World
+}
+
+func NewBulletTankCollisionHandler(world *World) *BulletPlayerCollisionHandler {
+	return &BulletPlayerCollisionHandler{world: world}
+}
+
+func (h *BulletTankCollisionHandler) HandleCollision(entityA, entityB Entity, components *ComponentStorage, dt float64) {
+	h.world.RemoveEntity(entityA)
 	components.Healths[entityB].Dead = true
 	components.Velocities[entityB].Current = 0
 }
 
-type BulletPlayerCollisionHandler struct{}
+type BulletPlayerCollisionHandler struct {
+	world *World
+}
 
-func (h *BulletPlayerCollisionHandler) HandleCollision(entityA, entityB Entity, components *ComponentStorage) {
-	components.RemoveEntity(entityA)
+func NewBulletPlayerCollisionHandler(world *World) *BulletPlayerCollisionHandler {
+	return &BulletPlayerCollisionHandler{world: world}
+}
+
+func (h *BulletPlayerCollisionHandler) HandleCollision(entityA, entityB Entity, components *ComponentStorage, dt float64) {
+	h.world.RemoveEntity(entityA)
 	components.Healths[entityB].Dead = true
 }
 
 type PlayerTowerCollisionHandler struct{}
 
-func (h *PlayerTowerCollisionHandler) HandleCollision(entityA, entityB Entity, components *ComponentStorage) {
+func (h *PlayerTowerCollisionHandler) HandleCollision(entityA, entityB Entity, components *ComponentStorage, dt float64) {
 	playerHealth := components.Healths[entityA]
 	if playerHealth.Dead {
 		return
@@ -26,21 +42,39 @@ func (h *PlayerTowerCollisionHandler) HandleCollision(entityA, entityB Entity, c
 }
 
 type PlayerPowerUpCollisionHandler struct {
-	F func(entity Entity, components *ComponentStorage)
+	world *World
+	f     func(entity Entity, components *ComponentStorage)
 }
 
-func (h *PlayerPowerUpCollisionHandler) HandleCollision(entityA, entityB Entity, components *ComponentStorage) {
-	h.F(entityA, components)
-	components.RemoveEntity(entityB)
+func NewPlayerPowerUpCollisionHandler(world *World, f func(entity Entity, components *ComponentStorage)) *PlayerPowerUpCollisionHandler {
+	return &PlayerPowerUpCollisionHandler{
+		world: world,
+		f:     f,
+	}
+}
+
+func (h *PlayerPowerUpCollisionHandler) HandleCollision(entityA, entityB Entity, components *ComponentStorage, dt float64) {
+	h.f(entityA, components)
+	h.world.RemoveEntity(entityB)
 }
 
 type TankPlayerCollisionHandler struct{}
 
-func (h *TankPlayerCollisionHandler) HandleCollision(entityA, entityB Entity, components *ComponentStorage) {
+func (h *TankPlayerCollisionHandler) HandleCollision(entityA, entityB Entity, components *ComponentStorage, dt float64) {
 	tankHealth := components.Healths[entityA]
 	if tankHealth.Dead {
 		return
 	}
 	health := components.Healths[entityB]
 	health.Dead = true
+}
+
+type TankTowerCollisionHandler struct{}
+
+func (h *TankTowerCollisionHandler) HandleCollision(entityA, entityB Entity, components *ComponentStorage, dt float64) {
+	position := components.Positions[entityA]
+	velocity := components.Velocities[entityA]
+
+	physics.Move2(position, -velocity.Current, dt)
+	position.Direction += physics.Deg180
 }

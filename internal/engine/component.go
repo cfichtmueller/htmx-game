@@ -1,14 +1,19 @@
 package engine
 
-import "cfichtmueller.com/htmx-game/internal/engine/bhv"
+import (
+	"cfichtmueller.com/htmx-game/internal/engine/bhv"
+	"cfichtmueller.com/htmx-game/internal/engine/physics"
+)
 
 type ComponentStorage struct {
 	Accelerations map[Entity]*Acceleration
+	AutoMove      map[Entity]*AutoMove
 	Behaviors     map[Entity]*Behavior
-	BoundingBoxes map[Entity]*BoundingBox
+	BoundingBoxes map[Entity]*physics.Rectangle
 	Frictions     map[Entity]*Friction
 	Healths       map[Entity]*Health
-	Positions     map[Entity]*Position
+	Positions     map[Entity]*physics.Position
+	Sensings      map[Entity]*Sensing
 	Velocities    map[Entity]*Velocity
 	EntityTypes   map[Entity]*EntityTypeComponent
 }
@@ -16,11 +21,13 @@ type ComponentStorage struct {
 func NewComponentStorage() *ComponentStorage {
 	return &ComponentStorage{
 		Accelerations: make(map[Entity]*Acceleration),
+		AutoMove:      make(map[Entity]*AutoMove),
 		Behaviors:     make(map[Entity]*Behavior),
-		BoundingBoxes: make(map[Entity]*BoundingBox),
+		BoundingBoxes: make(map[Entity]*physics.Rectangle),
 		Frictions:     make(map[Entity]*Friction),
 		Healths:       make(map[Entity]*Health),
-		Positions:     make(map[Entity]*Position),
+		Positions:     make(map[Entity]*physics.Position),
+		Sensings:      make(map[Entity]*Sensing),
 		Velocities:    make(map[Entity]*Velocity),
 		EntityTypes:   make(map[Entity]*EntityTypeComponent),
 	}
@@ -28,11 +35,13 @@ func NewComponentStorage() *ComponentStorage {
 
 func (s *ComponentStorage) RemoveEntity(entity Entity) {
 	delete(s.Accelerations, entity)
+	delete(s.AutoMove, entity)
 	delete(s.Behaviors, entity)
 	delete(s.BoundingBoxes, entity)
 	delete(s.Frictions, entity)
 	delete(s.Healths, entity)
 	delete(s.Positions, entity)
+	delete(s.Sensings, entity)
 	delete(s.Velocities, entity)
 	delete(s.EntityTypes, entity)
 }
@@ -44,12 +53,18 @@ type Acceleration struct {
 	AngularMax     float64
 }
 
-type Behavior struct {
-	Tree *bhv.Tree
+type AutoMove struct {
+	TargetDirection       float64
+	TargetDirectionActive bool
 }
 
-type BoundingBox struct {
-	Width, Height float64
+func (a *AutoMove) SetTargetDirection(d float64) {
+	a.TargetDirection = d
+	a.TargetDirectionActive = true
+}
+
+type Behavior struct {
+	Tree *bhv.Tree
 }
 
 type EntityTypeComponent struct {
@@ -71,8 +86,26 @@ type Health struct {
 	Decayed  bool
 }
 
-type Position struct {
-	X, Y, Direction float64
+type SensedEntity struct {
+	Entity   Entity
+	Type     EntityType
+	Position *physics.Position
+}
+
+type Sensing struct {
+	SensedEntities []SensedEntity
+	Ranges         map[EntityType]float64
+}
+
+func NewSensing() *Sensing {
+	return &Sensing{
+		Ranges: make(map[EntityType]float64),
+	}
+}
+
+func (s *Sensing) SetRange(t EntityType, d float64) *Sensing {
+	s.Ranges[t] = d
+	return s
 }
 
 type Velocity struct {
